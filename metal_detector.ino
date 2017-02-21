@@ -21,6 +21,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+ /*
+ * Modified by: Daniel Norman
+ */
 
 // Number of cycles from external counter needed to generate a signal event
 #define CYCLES_PER_SIGNAL 5000
@@ -29,14 +32,15 @@
 #define BASE_TONE_FREQUENCY 280
 
 // Frequency delta threshold for fancy spinner to trigger
-#define SPINNER_THRESHOLD 700
+#define MARKING_THRESHOLD 400
 
 // Pin definitions
 #define SENSITIVITY_POT_APIN 1
 #define SPEAKER_PIN 2
-#define SPINNER_PIN 9
+#define MARKING_PIN 8
 #define TRIGGER_BTN_PIN 11
 #define RESET_BTN_PIN 12
+#define RESET_BTN_OUTPUT 13
 
 unsigned long lastSignalTime = 0;
 unsigned long signalTimeDelta = 0;
@@ -81,43 +85,47 @@ void setup()
   OCR1A = 1;
 
   pinMode(SPEAKER_PIN, OUTPUT);
-  pinMode(SPINNER_PIN, OUTPUT);
+  pinMode(MARKING_PIN, OUTPUT);
   pinMode(TRIGGER_BTN_PIN, INPUT_PULLUP);
   pinMode(RESET_BTN_PIN, INPUT_PULLUP);
-  pinMode(13, OUTPUT);
+  pinMode(RESET_BTN_OUTPUT, OUTPUT);
+  
+  Serial.begin(9600);
+  Serial.println("Beginning");
 }
 
 void loop()
 {
-  if (digitalRead(TRIGGER_BTN_PIN) == LOW)
-  {
+  //if (digitalRead(TRIGGER_BTN_PIN) == LOW)
+  //{
     //float sensitivity = mapFloat(analogRead(SENSITIVITY_POT_APIN), 0, 1023, 0.5, 10.0);
-    float sensitivity = 1.0;
+    float sensitivity = 8.0;
     int storedTimeDeltaDifference = (storedTimeDelta - signalTimeDelta) * sensitivity;
     tone(SPEAKER_PIN, BASE_TONE_FREQUENCY + storedTimeDeltaDifference);
-
-    if (storedTimeDeltaDifference > SPINNER_THRESHOLD)
+    
+    Serial.println(storedTimeDeltaDifference);
+    
+    if (storedTimeDeltaDifference > MARKING_THRESHOLD)
     {
-      digitalWrite(SPINNER_PIN, HIGH);
+      digitalWrite(MARKING_PIN, HIGH);
     }
     else
     {
-      digitalWrite(SPINNER_PIN, LOW);
+      digitalWrite(MARKING_PIN, LOW);
     }
-  }
-  else
-  {
-    noTone(SPEAKER_PIN);
-    digitalWrite(SPINNER_PIN, LOW);
-  }
-
+  //}
+  //else
+  //{
+    //noTone(SPEAKER_PIN);
+    //digitalWrite(MARKING_PIN, LOW);
+  //}
   if (digitalRead(RESET_BTN_PIN) == LOW)
   {
     storedTimeDelta = 0;
-    digitalWrite(13, HIGH);
+    digitalWrite(RESET_BTN_OUTPUT, HIGH);
   }
   
-  digitalWrite(13, LOW);
+  digitalWrite(RESET_BTN_OUTPUT, LOW);
 }
 
 float mapFloat(int input, int inMin, int inMax, float outMin, float outMax)
