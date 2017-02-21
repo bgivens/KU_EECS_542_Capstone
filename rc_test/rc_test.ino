@@ -59,28 +59,27 @@ void loop() {
       if (mySerial.available() > 0) 
       {
         commandByte1 = mySerial.read();
-        //Serial.println("Left:");
-        //Serial.println(commandByte1);
+      
       }
-      int left_motor_value = (int) commandByte1;
+      int8_t left_motor_value = (int8_t) commandByte1;
       //Read right stick value
       if (mySerial.available() > 0) 
       {
         // Read our command byte
         commandByte2 = mySerial.read();
       }
-      int right_motor_value = (int) commandByte2;
+      int8_t right_motor_value = (int8_t) commandByte2;
       Serial.println("Left:");
       Serial.println(left_motor_value);
       Serial.println("Right:");
       Serial.println(right_motor_value);
       //If both values are zero, release motors
       //&& (right_motor_value < 150 && right_motor_value > 100  right_motor->run(RELEASE);
-      if(left_motor_value > 110 && left_motor_value < 150) 
+      if(left_motor_value == 126) 
       {
         left_motor->run(RELEASE); 
       }
-      if(right_motor_value > 110 && right_motor_value < 150)
+      if(right_motor_value == -124)
       {
         right_motor->run(RELEASE); 
       }
@@ -91,58 +90,33 @@ void loop() {
       
       //If value is less than zero, move backwards
    
-      if(left_motor_value < 20)
+      if(left_motor_value == 0)
       {
         //Since motor speed is a value ranged from 0-255, map the range 1-127 to 1-255 to get variable speed 
         int motor_speed = 150;
         left_motor->run(BACKWARD);
         left_motor->setSpeed(motor_speed);
       }
-      if(left_motor_value < 110 && left_motor_value > 60)
-      {
-        int motor_speed = 75;
-        left_motor->run(BACKWARD);
-        left_motor->setSpeed(motor_speed);
-      }
-      if(left_motor_value < 60 && left_motor_value > 20)
-      {
-        int motor_speed = 100;
-        left_motor->run(BACKWARD);
-        left_motor->setSpeed(motor_speed);
-      }
-      if(left_motor_value > 230)
+      if(left_motor_value <= -13 && left_motor_value >= -20)
       {
         int motor_speed = 150;
         left_motor->run(FORWARD);
         left_motor->setSpeed(motor_speed);
       }
-      if(left_motor_value > 150 && left_motor_value < 200)
-      {
-        int motor_speed = 75;
-        left_motor->run(FORWARD);
-        left_motor->setSpeed(motor_speed);
-      }
-      if(left_motor_value > 200 && left_motor_value < 230)
-      {
-        int motor_speed = 100;
-        left_motor->run(FORWARD);
-        left_motor->setSpeed(motor_speed);
-      }
-      
       
       //******************
       //Right motor control
       //******************
-      if(right_motor_value < 20)
-      {
-        int motor_speed = 150;
-        right_motor->run(BACKWARD);
-        right_motor->setSpeed(motor_speed);
-      }
-      if(right_motor_value > 230)
+      if(right_motor_value == -2)
       {
         int motor_speed = 150;
         right_motor->run(FORWARD);
+        right_motor->setSpeed(motor_speed);
+      }
+      if(right_motor_value == 0)
+      {
+        int motor_speed = 150;
+        right_motor->run(BACKWARD);
         right_motor->setSpeed(motor_speed);
       }
         
