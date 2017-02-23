@@ -94,14 +94,14 @@ void loop() {
       {
         //Since motor speed is a value ranged from 0-255, map the range 1-127 to 1-255 to get variable speed 
         int motor_speed = left_motor_value;
-        map(motor_speed, 0, 110, 150, 0);
+        motor_speed = map(motor_speed, 0, 110, 150, 0);
         left_motor->run(BACKWARD);
         left_motor->setSpeed(motor_speed);
       }
-      else if((left_motor_value > 140)
+      else if(left_motor_value > 140)
       {
         int motor_speed = left_motor_value;
-        map(motor_speed, 140, 255, 0, 150);
+        motor_speed = map(motor_speed, 140, 255, 0, 150);
         left_motor->run(FORWARD);
         left_motor->setSpeed(motor_speed);
       }   
@@ -152,14 +152,14 @@ void loop() {
       if((right_motor_value < 110) && (right_motor_value > 0))
       {
         int motor_speed = abs(right_motor_value);
-        map(motor_speed, 0, 110, 150, 0);
+        motor_speed = map(motor_speed, 0, 110, 150, 0);
         right_motor->run(BACKWARD);
         right_motor->setSpeed(motor_speed);
       }
-      else if((right_motor_value > 140)
+      else if(right_motor_value > 140)
       {
         int motor_speed = abs(right_motor_value);
-        map(motor_speed, 140, 255, 0, 150);
+        motor_speed = map(motor_speed, 140, 255, 0, 150);
         right_motor->run(FORWARD);
         right_motor->setSpeed(motor_speed);
       }
