@@ -2,7 +2,7 @@
 #include <SoftwareSerial.h>
 
 //Declaring software serial pins for XBee transmission
-SoftwareSerial mySerial(10,11);
+SoftwareSerial mySerial(10,11); // TX RX
 
 //Defining and initializing button variables and pins
 
