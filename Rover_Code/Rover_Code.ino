@@ -109,6 +109,45 @@ void setup() {
 
 void loop() {
 
+      
+      //Metal Detector Stuff
+     
+      //float sensitivity = mapFloat(analogRead(SENSITIVITY_POT_APIN), 0, 1023, 0.5, 10.0);
+      float sensitivity = 8.0;
+      int storedTimeDeltaDifference = (storedTimeDelta - signalTimeDelta) * sensitivity;
+      tone(SPEAKER_PIN, BASE_TONE_FREQUENCY + storedTimeDeltaDifference);
+
+
+      //Serial.print("Signal Time Delta: ");
+      //Serial.println(storedTimeDeltaDifference);
+      if(storedTimeDeltaDifference > 1000)
+      {
+        Serial.print("Stored Time Delta: ");
+        Serial.println(storedTimeDelta);
+        Serial.print("Signal Time Delta: ");
+        Serial.println(signalTimeDelta); 
+      }
+     
+
+      
+      //if(storedTimeDeltaDifference > MARKING_THRESHOLD && storedTimeDeltaDifference < 1000)
+      if(storedTimeDeltaDifference > MARKING_THRESHOLD)
+      {
+        digitalWrite(MARKING_PIN, HIGH);
+      }
+      else
+      {
+        digitalWrite(MARKING_PIN, LOW);
+      }
+  
+      if (digitalRead(RESET_BTN_PIN) == LOW)
+      {
+        storedTimeDelta = 0;
+        digitalWrite(RESET_BTN_OUTPUT, HIGH);
+      }
+      
+      digitalWrite(RESET_BTN_OUTPUT, LOW);
+
       //************************
       // XBee Communication
       //************************
@@ -178,36 +217,6 @@ void loop() {
         right_motor->run(FORWARD);
         right_motor->setSpeed(motor_speed);
       }
-      //if (digitalRead(TRIGGER_BTN_PIN) == LOW)
-      //{
-        //float sensitivity = mapFloat(analogRead(SENSITIVITY_POT_APIN), 0, 1023, 0.5, 10.0);
-        float sensitivity = 8.0;
-        int storedTimeDeltaDifference = (storedTimeDelta - signalTimeDelta) * sensitivity;
-        tone(SPEAKER_PIN, BASE_TONE_FREQUENCY + storedTimeDeltaDifference);
-        
-        Serial.println(storedTimeDeltaDifference);
-        
-        if (storedTimeDeltaDifference > MARKING_THRESHOLD && storedTimeDeltaDifference < 1000)
-        {
-          digitalWrite(MARKING_PIN, HIGH);
-        }
-        else
-        {
-          digitalWrite(MARKING_PIN, LOW);
-        }
-      //}
-      //else
-      //{
-        //noTone(SPEAKER_PIN);
-        //digitalWrite(MARKING_PIN, LOW);
-      //}
-      if (digitalRead(RESET_BTN_PIN) == LOW)
-      {
-        storedTimeDelta = 0;
-        digitalWrite(RESET_BTN_OUTPUT, HIGH);
-      }
-      
-      digitalWrite(RESET_BTN_OUTPUT, LOW);
       
 }
 
