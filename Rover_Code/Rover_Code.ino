@@ -1,3 +1,6 @@
+
+
+//Motor Imports & Variables
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
 
@@ -17,9 +20,76 @@ Servo scorpion;
 int val;
 byte rawData[2];
 
+//Metal Detector Imports & Variables
+
+
+// Number of cycles from external counter needed to generate a signal event
+#define CYCLES_PER_SIGNAL 5000
+
+// Base tone frequency (speaker)
+#define BASE_TONE_FREQUENCY 280
+
+// Frequency delta threshold for fancy spinner to trigger
+#define MARKING_THRESHOLD 400
+
+// Pin definitions
+#define SENSITIVITY_POT_APIN 1
+#define SPEAKER_PIN 2
+#define MARKING_PIN 8
+#define TRIGGER_BTN_PIN 11
+#define RESET_BTN_PIN 12
+#define RESET_BTN_OUTPUT 13
+
+unsigned long lastSignalTime = 0;
+unsigned long signalTimeDelta = 0;
+
+boolean firstSignal = true;
+unsigned long storedTimeDelta = 0;
+
+// This signal is called whenever OCR1A reaches 0
+// (Note: OCR1A is decremented on every external clock cycle)
+SIGNAL(TIMER1_COMPA_vect)
+{
+  unsigned long currentTime = micros();
+  signalTimeDelta =  currentTime - lastSignalTime;
+  lastSignalTime = currentTime;
+
+  if (firstSignal)
+  {
+    firstSignal = false;
+  }
+  else if (storedTimeDelta == 0)
+  {
+    storedTimeDelta = signalTimeDelta;
+  }
+
+  // Reset OCR1A
+  OCR1A += CYCLES_PER_SIGNAL;
+}
+
+
 void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(57600);           // set up Serial library at 9600 bps
+  
+  // Set WGM(Waveform Generation Mode) to 0 (Normal)
+  TCCR1A = 0b00000000;
+  
+  // Set CSS(Clock Speed Selection) to 0b111 (External clock source on T0 pin
+  // (ie, pin 5 on UNO). Clock on rising edge.)
+  TCCR1B = 0b00000111;
+
+  // Enable timer compare interrupt A (ie, SIGNAL(TIMER1_COMPA_VECT))
+  TIMSK1 |= (1 << OCIE1A);
+
+  // Set OCR1A (timer A counter) to 1 to trigger interrupt on next cycle
+  OCR1A = 1;
+  
+  pinMode(SPEAKER_PIN, OUTPUT);
+  pinMode(MARKING_PIN, OUTPUT);
+  pinMode(TRIGGER_BTN_PIN, INPUT_PULLUP);
+  pinMode(RESET_BTN_PIN, INPUT_PULLUP);
+  pinMode(RESET_BTN_OUTPUT, OUTPUT);
+  
+  Serial.begin(57600);          
   AFMS.begin();  // create with the default frequency 1.6KHz
   
   while (!Serial) {
@@ -94,47 +164,7 @@ void loop() {
         left_motor->run(FORWARD);
         left_motor->setSpeed(motor_speed);
       }   
-       
-//      if(left_motor_value < 20)
-//      {
-//        //Since motor speed is a value ranged from 0-255, map the range 1-127 to 1-255 to get variable speed 
-//        int motor_speed = abs(left_motor_value);
-//        map(motor_speed, 1, 127, 1, 255); 
-//        left_motor->run(BACKWARD);
-//        left_motor->setSpeed(motor_speed);
-//      }
-//      if(left_motor_value < 110 && left_motor_value > 60)
-//      {
-//        int motor_speed = 75;
-//        left_motor->run(BACKWARD);
-//        left_motor->setSpeed(motor_speed);
-//      }
-//      if(left_motor_value < 60 && left_motor_value > 20)
-//      {
-//        int motor_speed = 100;
-//        left_motor->run(BACKWARD);
-//        left_motor->setSpeed(motor_speed);
-//      }
-//      if(left_motor_value > 230)
-//      {
-//        int motor_speed = 150;
-//        left_motor->run(FORWARD);
-//        left_motor->setSpeed(motor_speed);
-//      }
-//      if(left_motor_value > 150 && left_motor_value < 200)
-//      {
-//        int motor_speed = 75;
-//        left_motor->run(FORWARD);
-//        left_motor->setSpeed(motor_speed);
-//      }
-//      if(left_motor_value > 200 && left_motor_value < 230)
-//      {
-//        int motor_speed = 100;
-//        left_motor->run(FORWARD);
-//        left_motor->setSpeed(motor_speed);
-//      }
-//      
-      
+  
       //******************
       //Right motor control
       //******************
@@ -152,44 +182,6 @@ void loop() {
         right_motor->run(FORWARD);
         right_motor->setSpeed(motor_speed);
       }
-      
-//      if(right_motor_value < 20)
-//      {
-//        //Since motor speed is a value ranged from 0-255, map the range 1-127 to 1-255 to get variable speed 
-//        int motor_speed = 150;
-//        right_motor->run(BACKWARD);
-//        right_motor->setSpeed(motor_speed);
-//      }
-//      if(right_motor_value < 110 && right_motor_value > 60)
-//      {
-//        int motor_speed = 75;
-//        right_motor->run(BACKWARD);
-//        right_motor->setSpeed(motor_speed);
-//      }
-//      if(right_motor_value < 60 && right_motor_value > 20)
-//      {
-//        int motor_speed = 100;
-//        right_motor->run(BACKWARD);
-//        right_motor->setSpeed(motor_speed);
-//      }
-//      if(right_motor_value > 230)
-//      {
-//        int motor_speed = 150;
-//        right_motor->run(FORWARD);
-//        right_motor->setSpeed(motor_speed);
-//      }
-//      if(right_motor_value > 150 && right_motor_value < 200)
-//      {
-//        int motor_speed = 75;
-//        right_motor->run(FORWARD);
-//        right_motor->setSpeed(motor_speed);
-//      }
-//      if(right_motor_value > 200 && right_motor_value < 230)
-//      {
-//        int motor_speed = 100;
-//        right_motor->run(FORWARD);
-//        right_motor->setSpeed(motor_speed);
-//      }
-        
+  
       
 }
