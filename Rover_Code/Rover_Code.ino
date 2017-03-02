@@ -1,5 +1,4 @@
 
-
 //Motor Imports & Variables
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
@@ -14,9 +13,9 @@ Adafruit_DCMotor *left_motor = AFMS.getMotor(2);
 byte commandByte1; 
 byte commandByte2; 
 #include <SoftwareSerial.h>
-#include <Servo.h>
+//#include <Servo.h>
 SoftwareSerial mySerial(10, 11); // RX, TX
-Servo scorpion;
+//Servo scorpion;
 int val;
 byte rawData[2];
 
@@ -30,7 +29,7 @@ byte rawData[2];
 #define BASE_TONE_FREQUENCY 280
 
 // Frequency delta threshold for fancy spinner to trigger
-#define MARKING_THRESHOLD 400
+#define MARKING_THRESHOLD 600
 
 // Pin definitions
 #define SENSITIVITY_POT_APIN 1
@@ -101,9 +100,9 @@ void setup() {
   // set the data rate for the SoftwareSerial port
   mySerial.begin(9600);
   
-  scorpion.attach(13);
+  //scorpion.attach(13);
   
-  scorpion.write(15);
+  //scorpion.write(15);
   right_motor->run(RELEASE);
   left_motor->run(RELEASE);
 }
@@ -129,10 +128,7 @@ void loop() {
         commandByte2 = mySerial.read();
       }
       int right_motor_value = (int) commandByte2;
-      Serial.println("Left:");
-      Serial.println(left_motor_value);
-      Serial.println("Right:");
-      Serial.println(right_motor_value);
+      
       //If both values are zero, release motors
       //&& (right_motor_value < 150 && right_motor_value > 100  right_motor->run(RELEASE);
       if(left_motor_value > 110 && left_motor_value < 150) 
@@ -182,6 +178,42 @@ void loop() {
         right_motor->run(FORWARD);
         right_motor->setSpeed(motor_speed);
       }
-  
+      //if (digitalRead(TRIGGER_BTN_PIN) == LOW)
+      //{
+        //float sensitivity = mapFloat(analogRead(SENSITIVITY_POT_APIN), 0, 1023, 0.5, 10.0);
+        float sensitivity = 8.0;
+        int storedTimeDeltaDifference = (storedTimeDelta - signalTimeDelta) * sensitivity;
+        tone(SPEAKER_PIN, BASE_TONE_FREQUENCY + storedTimeDeltaDifference);
+        
+        Serial.println(storedTimeDeltaDifference);
+        
+        if (storedTimeDeltaDifference > MARKING_THRESHOLD && storedTimeDeltaDifference < 1000)
+        {
+          digitalWrite(MARKING_PIN, HIGH);
+        }
+        else
+        {
+          digitalWrite(MARKING_PIN, LOW);
+        }
+      //}
+      //else
+      //{
+        //noTone(SPEAKER_PIN);
+        //digitalWrite(MARKING_PIN, LOW);
+      //}
+      if (digitalRead(RESET_BTN_PIN) == LOW)
+      {
+        storedTimeDelta = 0;
+        digitalWrite(RESET_BTN_OUTPUT, HIGH);
+      }
       
+      digitalWrite(RESET_BTN_OUTPUT, LOW);
+      
+}
+
+
+float mapFloat(int input, int inMin, int inMax, float outMin, float outMax)
+{
+  float scale = (float)(input - inMin) / (inMax - inMin);
+  return ((outMax - outMin) * scale) + outMin;
 }
