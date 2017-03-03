@@ -12,6 +12,7 @@ Adafruit_DCMotor *left_motor = AFMS.getMotor(2);
 
 byte commandByte1; 
 byte commandByte2; 
+byte commandByte3; 
 #include <SoftwareSerial.h>
 //#include <Servo.h>
 SoftwareSerial mySerial(10, 11); // RX, TX
@@ -44,6 +45,7 @@ unsigned long signalTimeDelta = 0;
 
 boolean firstSignal = true;
 unsigned long storedTimeDelta = 0;
+int zero_value = 1;
 
 // This signal is called whenever OCR1A reaches 0
 // (Note: OCR1A is decremented on every external clock cycle)
@@ -108,51 +110,9 @@ void setup() {
 }
 
 void loop() {
-
-      
-      //Metal Detector Stuff
-     
-      //float sensitivity = mapFloat(analogRead(SENSITIVITY_POT_APIN), 0, 1023, 0.5, 10.0);
-      float sensitivity = 8.0;
-      int storedTimeDeltaDifference = (storedTimeDelta - signalTimeDelta) * sensitivity;
-      tone(SPEAKER_PIN, BASE_TONE_FREQUENCY + storedTimeDeltaDifference);
-
-
-      //Serial.print("Signal Time Delta: ");
-      //Serial.println(storedTimeDeltaDifference);
-      if(storedTimeDeltaDifference > 1000)
-      {
-        Serial.print("Stored Time Delta: ");
-        Serial.println(storedTimeDelta);
-        Serial.print("Signal Time Delta: ");
-        Serial.println(signalTimeDelta); 
-      }
-     
-
-      
-      //if(storedTimeDeltaDifference > MARKING_THRESHOLD && storedTimeDeltaDifference < 1000)
-      if(storedTimeDeltaDifference > MARKING_THRESHOLD)
-      {
-        digitalWrite(MARKING_PIN, HIGH);
-      }
-      else
-      {
-        digitalWrite(MARKING_PIN, LOW);
-      }
   
-      if (digitalRead(RESET_BTN_PIN) == LOW)
-      {
-        storedTimeDelta = 0;
-        digitalWrite(RESET_BTN_OUTPUT, HIGH);
-      }
-      
-      digitalWrite(RESET_BTN_OUTPUT, LOW);
+      //Xbee Serial Read Stuff
 
-      //************************
-      // XBee Communication
-      //************************
-      
-      //Read left stick value
       if (mySerial.available() > 0) 
       {
         commandByte1 = mySerial.read();
@@ -167,6 +127,58 @@ void loop() {
         commandByte2 = mySerial.read();
       }
       int right_motor_value = (int) commandByte2;
+
+      if (mySerial.available() > 0) 
+      {
+        // Read our command byte
+        commandByte3 = mySerial.read();
+      }
+      int zero_value = (int) commandByte3;
+
+      
+      //Metal Detector Stuff
+     
+      float sensitivity = mapFloat(analogRead(SENSITIVITY_POT_APIN), 0, 1023, 0.5, 10.0);
+      int storedTimeDeltaDifference = (storedTimeDelta - signalTimeDelta) * sensitivity;
+      //tone(SPEAKER_PIN, BASE_TONE_FREQUENCY + storedTimeDeltaDifference);
+
+
+      //Serial.print("Signal Time Delta: ");
+      //Serial.println(storedTimeDeltaDifference);
+      if(storedTimeDeltaDifference > 1000)
+      {
+        Serial.print("Stored Time Delta: ");
+        Serial.println(storedTimeDeltaDifference);
+        //Serial.print("Signal Time Delta: ");
+        //Serial.println(signalTimeDelta); 
+      }
+      
+      //if(storedTimeDeltaDifference > MARKING_THRESHOLD && storedTimeDeltaDifference < 6000)
+      if(storedTimeDeltaDifference > MARKING_THRESHOLD)
+      {
+        digitalWrite(MARKING_PIN, HIGH);
+      }
+      else
+      {
+        digitalWrite(MARKING_PIN, LOW);
+      }
+  
+      //if (digitalRead(RESET_BTN_PIN) == LOW)
+      if (zero_value == 0)
+      {
+        storedTimeDelta = 0;
+        digitalWrite(RESET_BTN_OUTPUT, HIGH);
+      }
+      
+      digitalWrite(RESET_BTN_OUTPUT, LOW);
+     
+
+      //************************
+      // XBee Communication
+      //************************
+      
+      //Read left stick value
+     
       
       //If both values are zero, release motors
       //&& (right_motor_value < 150 && right_motor_value > 100  right_motor->run(RELEASE);
@@ -217,7 +229,9 @@ void loop() {
         right_motor->run(FORWARD);
         right_motor->setSpeed(motor_speed);
       }
-      
+
+
+     
 }
 
 

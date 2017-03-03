@@ -6,8 +6,9 @@ SoftwareSerial mySerial(10,11); // TX RX
 
 //Defining and initializing button variables and pins
 
-int zero_button = 4;
+int zero_button = 12;
 int zero_button_val = 1;
+
 
 //Defining and initializing variables for obtaining joystick data
 int joystick_right_vertical_pin = A1;
@@ -35,6 +36,7 @@ void setup() {
 }
 
 void loop() {
+  zero_button_val = 1;
   //
   //Obtaining button values
   //
@@ -46,6 +48,11 @@ void loop() {
   joystick_left_vertical_data = analogRead(joystick_left_vertical_pin);
   joystick_right_vertical_data = analogRead(joystick_right_vertical_pin);
   
+  if (digitalRead(zero_button) == LOW)
+  {
+    zero_button_val = 0;
+    //digitalWrite(RESET_BTN_OUTPUT, HIGH);
+  }
   //
   // Debugging prints to verify component functionality
   //
@@ -58,10 +65,15 @@ void loop() {
   Serial.println(joystick_left_vertical_data);
   Serial.print("Right Joystick Vertical Axis Data: ");
   Serial.println(joystick_right_vertical_data);
+  Serial.print("Reset Button Data: ");
+  Serial.println(zero_button_val);
+  
+  
   
   //Sending data to receiver through XBee every 100ms
   mySerial.write(map(joystick_right_vertical_data, 0, 1023, 0, 255));
   mySerial.write(map(joystick_left_vertical_data, 0, 1023, 0, 255));
+  mySerial.write(zero_button_val);
   //TODO: Send button data
   
   delay(100);
