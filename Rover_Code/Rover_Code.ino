@@ -14,9 +14,9 @@ byte commandByte1;
 byte commandByte2; 
 byte commandByte3; 
 #include <SoftwareSerial.h>
-#include <SoftwareServo.h>
+//#include <Servo.h>
 SoftwareSerial mySerial(10, 11); // RX, TX
-SoftwareServo markingServo;
+//Servo markingServo;
 int val;
 byte rawData[2];
 
