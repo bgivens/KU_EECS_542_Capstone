@@ -1,9 +1,12 @@
 //Arduino uno transmit
 #include <SoftwareSerial.h>
 
-#define ZERO_PIN 12
 #define SERIAL_DEBUG TRUE
 #define BAUDRATE 9600
+#define ZERO_PIN 12
+#define JS_R_PIN A1
+#define JS_L_PIN A0
+
 
 //Declaring software serial pins for XBee transmission
 SoftwareSerial xbee(10, 11); // TX RX
@@ -11,14 +14,7 @@ SoftwareSerial xbee(10, 11); // TX RX
 //Variable for storing state of button that zeros the metal detector
 int zero_button_val = 1;
 
-//Defining and initializing variables for obtaining joystick data
-int joystick_right_vertical_pin = A1;
-int joystick_left_vertical_pin = A0;
-
-//int joystick_right_horizontal_data = 0;
 int joystick_right_vertical_data = 0;
-
-//int joystick_left_horizontal_data = 0;
 int joystick_left_vertical_data = 0;
 
 
@@ -39,8 +35,8 @@ void setup() {
 
 void loop() {
   //Read analog joystick data
-  joystick_left_vertical_data = analogRead(joystick_left_vertical_pin);
-  joystick_right_vertical_data = analogRead(joystick_right_vertical_pin);
+  joystick_left_vertical_data = analogRead(JS_L_PIN);
+  joystick_right_vertical_data = analogRead(JS_R_PIN);
 
   //Read zero button
   zero_button_val = digitalRead(ZERO_PIN);
