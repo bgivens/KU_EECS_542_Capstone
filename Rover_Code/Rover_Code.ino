@@ -1,35 +1,18 @@
-
 //Motor Imports & Variables
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
+#include <SoftwareSerial.h>
+//#include <Servo.h>
+
 
 #include "utility/Adafruit_MS_PWMServoDriver.h"
 
-Adafruit_MotorShield AFMS = Adafruit_MotorShield(); 
-
-Adafruit_DCMotor *right_motor = AFMS.getMotor(1);
-Adafruit_DCMotor *left_motor = AFMS.getMotor(2);
-
-byte commandByte1; 
-byte commandByte2; 
-byte commandByte3; 
-#include <SoftwareSerial.h>
-//#include <Servo.h>
-SoftwareSerial mySerial(10, 11); // RX, TX
-//Servo markingServo;
-int val;
-byte rawData[2];
-
-//Metal Detector Imports & Variables
-
+#define SERIAL_DEBUG FALSE
 
 // Number of cycles from external counter needed to generate a signal event
 #define CYCLES_PER_SIGNAL 5000
 
-// Base tone frequency (speaker)
-#define BASE_TONE_FREQUENCY 280
-
-// Frequency delta threshold for fancy spinner to trigger
+// Frequency delta threshold for triggering
 #define MARKING_THRESHOLD 600
 
 // Pin definitions
@@ -39,6 +22,16 @@ byte rawData[2];
 #define TRIGGER_BTN_PIN 11
 #define RESET_BTN_PIN 12
 #define RESET_BTN_OUTPUT 13
+
+Adafruit_MotorShield AFMS = Adafruit_MotorShield();
+Adafruit_DCMotor *right_motor = AFMS.getMotor(1);
+Adafruit_DCMotor *left_motor = AFMS.getMotor(2);
+
+byte commandByte1;
+byte commandByte2;
+byte commandByte3;
+SoftwareSerial xbee(10, 11); // RX, TX
+//Servo spraycan;
 
 unsigned long lastSignalTime = 0;
 unsigned long signalTimeDelta = 0;
@@ -52,15 +45,13 @@ int zero_value = 1;
 SIGNAL(TIMER1_COMPA_vect)
 {
   unsigned long currentTime = micros();
-  signalTimeDelta =  currentTime - lastSignalTime;
+  signalTimeDelta = currentTime - lastSignalTime;
   lastSignalTime = currentTime;
 
-  if (firstSignal)
-  {
+  if (firstSignal) {
     firstSignal = false;
   }
-  else if (storedTimeDelta == 0)
-  {
+  else if (storedTimeDelta == 0) {
     storedTimeDelta = signalTimeDelta;
   }
 
@@ -70,10 +61,10 @@ SIGNAL(TIMER1_COMPA_vect)
 
 
 void setup() {
-  
+
   // Set WGM(Waveform Generation Mode) to 0 (Normal)
   TCCR1A = 0b00000000;
-  
+
   // Set CSS(Clock Speed Selection) to 0b111 (External clock source on T0 pin
   // (ie, pin 5 on UNO). Clock on rising edge.)
   TCCR1B = 0b00000111;
@@ -83,17 +74,17 @@ void setup() {
 
   // Set OCR1A (timer A counter) to 1 to trigger interrupt on next cycle
   OCR1A = 1;
-  
+
   pinMode(SPEAKER_PIN, OUTPUT);
   pinMode(MARKING_PIN, OUTPUT);
   pinMode(TRIGGER_BTN_PIN, INPUT_PULLUP);
   pinMode(RESET_BTN_PIN, INPUT_PULLUP);
   pinMode(RESET_BTN_OUTPUT, OUTPUT);
+
   markingServo.attach(9);
- 
-  Serial.begin(57600);          
+
+  Serial.begin(57600);
   AFMS.begin();  // create with the default frequency 1.6KHz
-  
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
@@ -101,144 +92,122 @@ void setup() {
   Serial.println("Adafruit Motorshield v2 - DC Motor test!");
 
   // set the data rate for the SoftwareSerial port
-  mySerial.begin(9600);
-  
-  //scorpion.attach(13);
-  
-  //scorpion.write(15);
+  xbee.begin(9600);
+
+  //spraycan.attach(13);
+  //spraycan.write(15);
   right_motor->run(RELEASE);
   left_motor->run(RELEASE);
 }
 
 void loop() {
-    
-  //Xbee Serial Read Stuff
+  //Xbee Serial Read
+  if (xbee.available() > 0) {
+    commandByte1 = xbee.read();
 
-  if (mySerial.available() > 0) 
-  {
-    commandByte1 = mySerial.read();
-    //Serial.println("Left:");
-    //Serial.println(commandByte1);
+    #if SERIAL_DEBUG
+    Serial.println("Left:");
+    Serial.println(commandByte1);
+    #endif
   }
   int left_motor_value = (int) commandByte1;
+
   //Read right stick value
-  if (mySerial.available() > 0) 
-  {
+  if (xbee.available() > 0) {
     // Read our command byte
-    commandByte2 = mySerial.read();
+    commandByte2 = xbee.read();
   }
   int right_motor_value = (int) commandByte2;
 
-  if (mySerial.available() > 0) 
-  {
+  if (xbee.available() > 0) {
     // Read our command byte
-    commandByte3 = mySerial.read();
+    commandByte3 = xbee.read();
   }
   int zero_value = (int) commandByte3;
 
-  
-  //Metal Detector Stuff
- 
+  //Metal Detector
   float sensitivity = mapFloat(analogRead(SENSITIVITY_POT_APIN), 0, 1023, 0.5, 10.0);
   int storedTimeDeltaDifference = (storedTimeDelta - signalTimeDelta) * sensitivity;
-  //tone(SPEAKER_PIN, BASE_TONE_FREQUENCY + storedTimeDeltaDifference);
 
+  #if SERIAL_DEBUG
+  Serial.print("Signal Time Delta: ");
+  Serial.println(storedTimeDeltaDifference);
+  #endif
 
-  //Serial.print("Signal Time Delta: ");
-  //Serial.println(storedTimeDeltaDifference);
-  if(storedTimeDeltaDifference > 1000)
-  {
+  if (storedTimeDeltaDifference > 1000) {
     Serial.print("Stored Time Delta: ");
     Serial.println(storedTimeDeltaDifference);
-    //Serial.print("Signal Time Delta: ");
-    //Serial.println(signalTimeDelta); 
+
+    #if SERIAL_DEBUG
+    Serial.print("Signal Time Delta: ");
+    Serial.println(signalTimeDelta);
+    #endif
   }
-  
+
   //if(storedTimeDeltaDifference > MARKING_THRESHOLD && storedTimeDeltaDifference < 6000)
-  if(storedTimeDeltaDifference > MARKING_THRESHOLD)
-  {
-    markingServo.write(0);
-    markingServo.write(90);
-    markingServo.write(0);
+  if (storedTimeDeltaDifference > MARKING_THRESHOLD) {
     digitalWrite(MARKING_PIN, HIGH);
-  }
-  else
-  {
+  } else {
     digitalWrite(MARKING_PIN, LOW);
   }
 
-  //if (digitalRead(RESET_BTN_PIN) == LOW)
-  if (zero_value == 0)
-  {
+  if (zero_value == 0) {
     storedTimeDelta = 0;
     digitalWrite(RESET_BTN_OUTPUT, HIGH);
   }
-  
+
   digitalWrite(RESET_BTN_OUTPUT, LOW);
- 
 
-  //************************
-  // XBee Communication
-  //************************
-  
-  //Read left stick value
- 
-  
-  //If both values are zero, release motors
-  //&& (right_motor_value < 150 && right_motor_value > 100  right_motor->run(RELEASE);
-  if(left_motor_value > 110 && left_motor_value < 150) 
-  {
-    left_motor->run(RELEASE); 
-  }
-  if(right_motor_value > 110 && right_motor_value < 150)
-  {
-    right_motor->run(RELEASE); 
-  }
- 
-  //******************
-  //Left motor control
-  //******************
-  
-  //If value is less than zero, move backwards
-  if((left_motor_value < 110) && (left_motor_value > 0))
-  {
-    //Since motor speed is a value ranged from 0-255, map the range 1-127 to 1-255 to get variable speed 
-    int motor_speed = left_motor_value;
-    motor_speed = map(motor_speed, 0, 110, 150, 0);
-    left_motor->run(BACKWARD);
-    left_motor->setSpeed(motor_speed);
-  }
-  else if(left_motor_value > 140)
-  {
-    int motor_speed = left_motor_value;
-    motor_speed = map(motor_speed, 140, 255, 0, 150);
-    left_motor->run(FORWARD);
-    left_motor->setSpeed(motor_speed);
-  }   
-
-  //******************
-  //Right motor control
-  //******************
-  if((right_motor_value < 110) && (right_motor_value > 0))
-  {
-    int motor_speed = abs(right_motor_value);
-    motor_speed = map(motor_speed, 0, 110, 150, 0);
-    right_motor->run(BACKWARD);
-    right_motor->setSpeed(motor_speed);
-  }
-  else if(right_motor_value > 140)
-  {
-    int motor_speed = abs(right_motor_value);
-    motor_speed = map(motor_speed, 140, 255, 0, 150);
-    right_motor->run(FORWARD);
-    right_motor->setSpeed(motor_speed);
-  }
-     
+  // Adjust the speed and direction of the right and left motors
+  controlMotor(right_motor_value, 1);
+  controlMotor(leftt_motor_value, 2);
 }
 
+/**
+* Control the speed of a motor on the rover.
+* @param motor_value a [0, 255] value that determines the speed and direction of the motor
+* @param motor the motor to apply changes to based on the following map:
+* 1 = Right track
+* 2 = Left track
+*/
+void controlMotor(int motor_value, int motor) {
+  if ((motor_value > 0) && (motor_value <= 110)) {
+    int motor_speed = map(motor_value, 0, 110, 150, 0);
+    if (motor == 1) {
+      right_motor->run(BACKWARD);
+      right_motor->setSpeed(motor_speed);
+    } else if (motor == 2) {
+      left_motor->run(BACKWARD);
+      left_motor->setSpeed(motor_speed);
+    }
+  } else if ((motor_value > 110) && (motor_value < 140) {
+    if (motor == 1) {
+      right_motor->run(RELEASE);
+    } else if (motor == 2) {
+      left_motor->run(RELEASE);
+    }
+  } else if (motor_value >= 140) {
+    int motor_speed = map(motor_value, 140, 255, 0, 150);
+    if (motor == 1) {
+      right_motor->run(FORWARD);
+      right_motor->setSpeed(motor_speed);
+    } else if (motor == 2) {
+      left_motor->run(FORWARD);
+      left_motor->setSpeed(motor_speed);
+    }
+  }
+}
 
-float mapFloat(int input, int inMin, int inMax, float outMin, float outMax)
-{
+/**
+* Map an integer from range [inMin, inMax] to a floating point range [outMin, outMax]
+* @param input the integer to be mapped
+* @param inMin minimum of input range
+* @param inMax maximum of input range
+* @param outMin minimum of output range
+* @param outMax maximum of output range
+* @return mapped floating point value
+*/
+float mapFloat(int input, int inMin, int inMax, float outMin, float outMax) {
   float scale = (float)(input - inMin) / (inMax - inMin);
   return ((outMax - outMin) * scale) + outMin;
 }
