@@ -99,7 +99,7 @@ void loop()
   //if (digitalRead(TRIGGER_BTN_PIN) == LOW)
   //{
     //float sensitivity = mapFloat(analogRead(SENSITIVITY_POT_APIN), 0, 1023, 0.5, 10.0);
-    float sensitivity = 8.0;
+    float sensitivity = 10.0;
     int storedTimeDeltaDifference = (storedTimeDelta - signalTimeDelta) * sensitivity;
     tone(SPEAKER_PIN, BASE_TONE_FREQUENCY + storedTimeDeltaDifference);
     

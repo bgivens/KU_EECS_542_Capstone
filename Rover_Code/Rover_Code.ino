@@ -14,9 +14,9 @@ byte commandByte1;
 byte commandByte2; 
 byte commandByte3; 
 #include <SoftwareSerial.h>
-//#include <Servo.h>
+#include <SoftwareServo.h>
 SoftwareSerial mySerial(10, 11); // RX, TX
-//Servo scorpion;
+SoftwareServo markingServo;
 int val;
 byte rawData[2];
 
@@ -89,7 +89,8 @@ void setup() {
   pinMode(TRIGGER_BTN_PIN, INPUT_PULLUP);
   pinMode(RESET_BTN_PIN, INPUT_PULLUP);
   pinMode(RESET_BTN_OUTPUT, OUTPUT);
-  
+  markingServo.attach(9);
+ 
   Serial.begin(57600);          
   AFMS.begin();  // create with the default frequency 1.6KHz
   
@@ -110,127 +111,128 @@ void setup() {
 }
 
 void loop() {
+    
+  //Xbee Serial Read Stuff
+
+  if (mySerial.available() > 0) 
+  {
+    commandByte1 = mySerial.read();
+    //Serial.println("Left:");
+    //Serial.println(commandByte1);
+  }
+  int left_motor_value = (int) commandByte1;
+  //Read right stick value
+  if (mySerial.available() > 0) 
+  {
+    // Read our command byte
+    commandByte2 = mySerial.read();
+  }
+  int right_motor_value = (int) commandByte2;
+
+  if (mySerial.available() > 0) 
+  {
+    // Read our command byte
+    commandByte3 = mySerial.read();
+  }
+  int zero_value = (int) commandByte3;
+
   
-      //Xbee Serial Read Stuff
-
-      if (mySerial.available() > 0) 
-      {
-        commandByte1 = mySerial.read();
-        //Serial.println("Left:");
-        //Serial.println(commandByte1);
-      }
-      int left_motor_value = (int) commandByte1;
-      //Read right stick value
-      if (mySerial.available() > 0) 
-      {
-        // Read our command byte
-        commandByte2 = mySerial.read();
-      }
-      int right_motor_value = (int) commandByte2;
-
-      if (mySerial.available() > 0) 
-      {
-        // Read our command byte
-        commandByte3 = mySerial.read();
-      }
-      int zero_value = (int) commandByte3;
-
-      
-      //Metal Detector Stuff
-     
-      float sensitivity = mapFloat(analogRead(SENSITIVITY_POT_APIN), 0, 1023, 0.5, 10.0);
-      int storedTimeDeltaDifference = (storedTimeDelta - signalTimeDelta) * sensitivity;
-      //tone(SPEAKER_PIN, BASE_TONE_FREQUENCY + storedTimeDeltaDifference);
+  //Metal Detector Stuff
+ 
+  float sensitivity = mapFloat(analogRead(SENSITIVITY_POT_APIN), 0, 1023, 0.5, 10.0);
+  int storedTimeDeltaDifference = (storedTimeDelta - signalTimeDelta) * sensitivity;
+  //tone(SPEAKER_PIN, BASE_TONE_FREQUENCY + storedTimeDeltaDifference);
 
 
-      //Serial.print("Signal Time Delta: ");
-      //Serial.println(storedTimeDeltaDifference);
-      if(storedTimeDeltaDifference > 1000)
-      {
-        Serial.print("Stored Time Delta: ");
-        Serial.println(storedTimeDeltaDifference);
-        //Serial.print("Signal Time Delta: ");
-        //Serial.println(signalTimeDelta); 
-      }
-      
-      //if(storedTimeDeltaDifference > MARKING_THRESHOLD && storedTimeDeltaDifference < 6000)
-      if(storedTimeDeltaDifference > MARKING_THRESHOLD)
-      {
-        digitalWrite(MARKING_PIN, HIGH);
-      }
-      else
-      {
-        digitalWrite(MARKING_PIN, LOW);
-      }
+  //Serial.print("Signal Time Delta: ");
+  //Serial.println(storedTimeDeltaDifference);
+  if(storedTimeDeltaDifference > 1000)
+  {
+    Serial.print("Stored Time Delta: ");
+    Serial.println(storedTimeDeltaDifference);
+    //Serial.print("Signal Time Delta: ");
+    //Serial.println(signalTimeDelta); 
+  }
   
-      //if (digitalRead(RESET_BTN_PIN) == LOW)
-      if (zero_value == 0)
-      {
-        storedTimeDelta = 0;
-        digitalWrite(RESET_BTN_OUTPUT, HIGH);
-      }
-      
-      digitalWrite(RESET_BTN_OUTPUT, LOW);
-     
+  //if(storedTimeDeltaDifference > MARKING_THRESHOLD && storedTimeDeltaDifference < 6000)
+  if(storedTimeDeltaDifference > MARKING_THRESHOLD)
+  {
+    markingServo.write(0);
+    markingServo.write(90);
+    markingServo.write(0);
+    digitalWrite(MARKING_PIN, HIGH);
+  }
+  else
+  {
+    digitalWrite(MARKING_PIN, LOW);
+  }
 
-      //************************
-      // XBee Communication
-      //************************
-      
-      //Read left stick value
-     
-      
-      //If both values are zero, release motors
-      //&& (right_motor_value < 150 && right_motor_value > 100  right_motor->run(RELEASE);
-      if(left_motor_value > 110 && left_motor_value < 150) 
-      {
-        left_motor->run(RELEASE); 
-      }
-      if(right_motor_value > 110 && right_motor_value < 150)
-      {
-        right_motor->run(RELEASE); 
-      }
-     
-      //******************
-      //Left motor control
-      //******************
-      
-      //If value is less than zero, move backwards
-      if((left_motor_value < 110) && (left_motor_value > 0))
-      {
-        //Since motor speed is a value ranged from 0-255, map the range 1-127 to 1-255 to get variable speed 
-        int motor_speed = left_motor_value;
-        motor_speed = map(motor_speed, 0, 110, 150, 0);
-        left_motor->run(BACKWARD);
-        left_motor->setSpeed(motor_speed);
-      }
-      else if(left_motor_value > 140)
-      {
-        int motor_speed = left_motor_value;
-        motor_speed = map(motor_speed, 140, 255, 0, 150);
-        left_motor->run(FORWARD);
-        left_motor->setSpeed(motor_speed);
-      }   
+  //if (digitalRead(RESET_BTN_PIN) == LOW)
+  if (zero_value == 0)
+  {
+    storedTimeDelta = 0;
+    digitalWrite(RESET_BTN_OUTPUT, HIGH);
+  }
   
-      //******************
-      //Right motor control
-      //******************
-      if((right_motor_value < 110) && (right_motor_value > 0))
-      {
-        int motor_speed = abs(right_motor_value);
-        motor_speed = map(motor_speed, 0, 110, 150, 0);
-        right_motor->run(BACKWARD);
-        right_motor->setSpeed(motor_speed);
-      }
-      else if(right_motor_value > 140)
-      {
-        int motor_speed = abs(right_motor_value);
-        motor_speed = map(motor_speed, 140, 255, 0, 150);
-        right_motor->run(FORWARD);
-        right_motor->setSpeed(motor_speed);
-      }
+  digitalWrite(RESET_BTN_OUTPUT, LOW);
+ 
 
+  //************************
+  // XBee Communication
+  //************************
+  
+  //Read left stick value
+ 
+  
+  //If both values are zero, release motors
+  //&& (right_motor_value < 150 && right_motor_value > 100  right_motor->run(RELEASE);
+  if(left_motor_value > 110 && left_motor_value < 150) 
+  {
+    left_motor->run(RELEASE); 
+  }
+  if(right_motor_value > 110 && right_motor_value < 150)
+  {
+    right_motor->run(RELEASE); 
+  }
+ 
+  //******************
+  //Left motor control
+  //******************
+  
+  //If value is less than zero, move backwards
+  if((left_motor_value < 110) && (left_motor_value > 0))
+  {
+    //Since motor speed is a value ranged from 0-255, map the range 1-127 to 1-255 to get variable speed 
+    int motor_speed = left_motor_value;
+    motor_speed = map(motor_speed, 0, 110, 150, 0);
+    left_motor->run(BACKWARD);
+    left_motor->setSpeed(motor_speed);
+  }
+  else if(left_motor_value > 140)
+  {
+    int motor_speed = left_motor_value;
+    motor_speed = map(motor_speed, 140, 255, 0, 150);
+    left_motor->run(FORWARD);
+    left_motor->setSpeed(motor_speed);
+  }   
 
+  //******************
+  //Right motor control
+  //******************
+  if((right_motor_value < 110) && (right_motor_value > 0))
+  {
+    int motor_speed = abs(right_motor_value);
+    motor_speed = map(motor_speed, 0, 110, 150, 0);
+    right_motor->run(BACKWARD);
+    right_motor->setSpeed(motor_speed);
+  }
+  else if(right_motor_value > 140)
+  {
+    int motor_speed = abs(right_motor_value);
+    motor_speed = map(motor_speed, 140, 255, 0, 150);
+    right_motor->run(FORWARD);
+    right_motor->setSpeed(motor_speed);
+  }
      
 }
 
