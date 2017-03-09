@@ -2,10 +2,8 @@
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
 #include <SoftwareSerial.h>
-//#include <Servo.h>
-
-
-#include "utility/Adafruit_MS_PWMServoDriver.h"
+#include <Servo.h>
+// #include "utility/Adafruit_MS_PWMServoDriver.h"
 
 #define SERIAL_DEBUG FALSE
 
@@ -17,7 +15,6 @@
 
 // Pin definitions
 #define SENSITIVITY_POT_APIN 1
-#define SPEAKER_PIN 2
 #define MARKING_PIN 8
 #define TRIGGER_BTN_PIN 11
 #define RESET_BTN_PIN 12
@@ -27,69 +24,24 @@ Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 Adafruit_DCMotor *right_motor = AFMS.getMotor(1);
 Adafruit_DCMotor *left_motor = AFMS.getMotor(2);
 
-byte commandByte1;
-byte commandByte2;
-byte commandByte3;
+byte commandByte;
 SoftwareSerial xbee(10, 11); // RX, TX
-//Servo spraycan;
+Servo spraycan;
 
-unsigned long lastSignalTime = 0;
-unsigned long signalTimeDelta = 0;
-
-boolean firstSignal = true;
-unsigned long storedTimeDelta = 0;
 int zero_value = 1;
 
-// This signal is called whenever OCR1A reaches 0
-// (Note: OCR1A is decremented on every external clock cycle)
-SIGNAL(TIMER1_COMPA_vect)
-{
-  unsigned long currentTime = micros();
-  signalTimeDelta = currentTime - lastSignalTime;
-  lastSignalTime = currentTime;
-
-  if (firstSignal) {
-    firstSignal = false;
-  }
-  else if (storedTimeDelta == 0) {
-    storedTimeDelta = signalTimeDelta;
-  }
-
-  // Reset OCR1A
-  OCR1A += CYCLES_PER_SIGNAL;
-}
-
-
 void setup() {
-
-  // Set WGM(Waveform Generation Mode) to 0 (Normal)
-  TCCR1A = 0b00000000;
-
-  // Set CSS(Clock Speed Selection) to 0b111 (External clock source on T0 pin
-  // (ie, pin 5 on UNO). Clock on rising edge.)
-  TCCR1B = 0b00000111;
-
-  // Enable timer compare interrupt A (ie, SIGNAL(TIMER1_COMPA_VECT))
-  TIMSK1 |= (1 << OCIE1A);
-
-  // Set OCR1A (timer A counter) to 1 to trigger interrupt on next cycle
-  OCR1A = 1;
-
-  pinMode(SPEAKER_PIN, OUTPUT);
   pinMode(MARKING_PIN, OUTPUT);
   pinMode(TRIGGER_BTN_PIN, INPUT_PULLUP);
   pinMode(RESET_BTN_PIN, INPUT_PULLUP);
   pinMode(RESET_BTN_OUTPUT, OUTPUT);
 
-  markingServo.attach(9);
+  // markingServo.attach(9);
 
   Serial.begin(57600);
   AFMS.begin();  // create with the default frequency 1.6KHz
-  while (!Serial) {
-    ; // wait for serial port to connect. Needed for native USB port only
-  }
-
-  Serial.println("Adafruit Motorshield v2 - DC Motor test!");
+  // wait for serial port to connect. Needed for native USB port only
+  while (!Serial) ;
 
   // set the data rate for the SoftwareSerial port
   xbee.begin(9600);
@@ -102,54 +54,30 @@ void setup() {
 
 void loop() {
   //Xbee Serial Read
+  // Read left stick value
   if (xbee.available() > 0) {
-    commandByte1 = xbee.read();
-
+    commandByte = xbee.read();
     #if SERIAL_DEBUG
     Serial.println("Left:");
-    Serial.println(commandByte1);
+    Serial.println(commandByte);
     #endif
   }
-  int left_motor_value = (int) commandByte1;
+  int left_motor_value = (int) commandByte;
 
   //Read right stick value
   if (xbee.available() > 0) {
     // Read our command byte
-    commandByte2 = xbee.read();
+    commandByte = xbee.read();
   }
-  int right_motor_value = (int) commandByte2;
+  int right_motor_value = (int) commandByte;
 
+  // Read zeroing command
   if (xbee.available() > 0) {
     // Read our command byte
-    commandByte3 = xbee.read();
+    commandByte = xbee.read();
   }
-  int zero_value = (int) commandByte3;
+  int zero_value = (int) commandByte;
 
-  //Metal Detector
-  float sensitivity = mapFloat(analogRead(SENSITIVITY_POT_APIN), 0, 1023, 0.5, 10.0);
-  int storedTimeDeltaDifference = (storedTimeDelta - signalTimeDelta) * sensitivity;
-
-  #if SERIAL_DEBUG
-  Serial.print("Signal Time Delta: ");
-  Serial.println(storedTimeDeltaDifference);
-  #endif
-
-  if (storedTimeDeltaDifference > 1000) {
-    Serial.print("Stored Time Delta: ");
-    Serial.println(storedTimeDeltaDifference);
-
-    #if SERIAL_DEBUG
-    Serial.print("Signal Time Delta: ");
-    Serial.println(signalTimeDelta);
-    #endif
-  }
-
-  //if(storedTimeDeltaDifference > MARKING_THRESHOLD && storedTimeDeltaDifference < 6000)
-  if (storedTimeDeltaDifference > MARKING_THRESHOLD) {
-    digitalWrite(MARKING_PIN, HIGH);
-  } else {
-    digitalWrite(MARKING_PIN, LOW);
-  }
 
   if (zero_value == 0) {
     storedTimeDelta = 0;
