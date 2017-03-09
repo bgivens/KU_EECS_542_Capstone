@@ -5,10 +5,7 @@
 #include <Servo.h>
 // #include "utility/Adafruit_MS_PWMServoDriver.h"
 
-#define SERIAL_DEBUG FALSE
-
-// Number of cycles from external counter needed to generate a signal event
-#define CYCLES_PER_SIGNAL 5000
+#define SERIAL_DEBUG TRUE
 
 // Frequency delta threshold for triggering
 #define MARKING_THRESHOLD 600
@@ -41,10 +38,18 @@ void setup() {
   Serial.begin(57600);
   AFMS.begin();  // create with the default frequency 1.6KHz
   // wait for serial port to connect. Needed for native USB port only
-  while (!Serial) ;
+  while (!Serial) {
+    ;  
+  }
+  #if SERIAL_DEBUG
+  Serial.println("Serial connected");
+  #endif
 
   // set the data rate for the SoftwareSerial port
   xbee.begin(9600);
+  #if SERIAL_DEBUG
+  Serial.println("Xbee connected");
+  #endif
 
   //spraycan.attach(13);
   //spraycan.write(15);
@@ -78,17 +83,11 @@ void loop() {
   }
   int zero_value = (int) commandByte;
 
-
-  if (zero_value == 0) {
-    storedTimeDelta = 0;
-    digitalWrite(RESET_BTN_OUTPUT, HIGH);
-  }
-
   digitalWrite(RESET_BTN_OUTPUT, LOW);
 
   // Adjust the speed and direction of the right and left motors
   controlMotor(right_motor_value, 1);
-  controlMotor(leftt_motor_value, 2);
+  controlMotor(left_motor_value, 2);
 }
 
 /**
@@ -108,7 +107,7 @@ void controlMotor(int motor_value, int motor) {
       left_motor->run(BACKWARD);
       left_motor->setSpeed(motor_speed);
     }
-  } else if ((motor_value > 110) && (motor_value < 140) {
+  } else if ((motor_value > 110) && (motor_value < 140)) {
     if (motor == 1) {
       right_motor->run(RELEASE);
     } else if (motor == 2) {
