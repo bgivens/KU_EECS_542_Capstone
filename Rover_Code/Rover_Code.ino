@@ -7,43 +7,36 @@
 
 #define SERIAL_DEBUG 1
 
-// Frequency delta threshold for triggering
-#define MARKING_THRESHOLD 600
-
 // Pin definitions
 #define SENSITIVITY_POT_APIN 1
-#define MARKING_PIN 8
-#define TRIGGER_BTN_PIN 11
-#define RESET_BTN_PIN 12
-#define RESET_BTN_OUTPUT 13
+#define SPRAYCAN_PIN 8
+#define ZERO_BTN_OUTPUT 13
 
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 Adafruit_DCMotor *right_motor = AFMS.getMotor(1);
 Adafruit_DCMotor *left_motor = AFMS.getMotor(2);
 
-byte leftCommandByte;
-byte rightCommandByte;
-byte zeroCommandByte;
-
-
 SoftwareSerial xbee(10, 11); // RX, TX
 Servo spraycan;
 
-int left_motor_value = 125;
-int right_motor_value = 125;
+int left_motor_value = 540;
+int right_motor_value = 540;
 int zero_value = 0;
 String COMMA = ", ";
 
 void setup() {
-  pinMode(MARKING_PIN, OUTPUT);
-  pinMode(TRIGGER_BTN_PIN, INPUT_PULLUP);
-  pinMode(RESET_BTN_PIN, INPUT_PULLUP);
-  pinMode(RESET_BTN_OUTPUT, OUTPUT);
+  // Configure I/O pins
+  pinMode(SPRAYCAN_PIN, OUTPUT);
+  pinMode(ZERO_BTN_OUTPUT, OUTPUT);
 
-  // markingServo.attach(9);
+  // Configure the servo
+  // spraycan.attach(SPRAYCAN_PIN);
 
+  // Configure motor shield with the default frequency 1.6KHz
+  AFMS.begin();
+
+  // Configure hardware serial for debugging
   Serial.begin(57600);
-  AFMS.begin();  // create with the default frequency 1.6KHz
   // wait for serial port to connect. Needed for native USB port only
   while (!Serial) ;
 
@@ -55,6 +48,7 @@ void setup() {
   xbee.begin(9600);
   #if SERIAL_DEBUG
   Serial.println("Xbee connected");
+  Serial.println("Left, Right, Zero");
   #endif
 
   //spraycan.attach(13);
@@ -64,54 +58,22 @@ void setup() {
 }
 
 void loop() {
-  //Xbee Serial Read
-  // Read left stick value
-  // if (xbee.available() > 0) {
-  //   leftCommandByte = xbee.read();
-  //   #if SERIAL_DEBUG
-  //   Serial.println("Left:");
-  //   Serial.println(leftCommandByte);
-  //   #endif
-  // }
-  // int left_motor_value = (int) leftCommandByte;
-  //
-  // //Read right stick value
-  // if (xbee.available() > 0) {
-  //   // Read our command byte
-  //   rightCommandByte = xbee.read();
-  // }
-  // int right_motor_value = (int) rightCommandByte;
-  //
-  // // Read zeroing command
-  // if (xbee.available() > 0) {
-  //   // Read our command byte
-  //   zeroCommandByte = xbee.read();
-  // }
-  // int zero_value = (int) zeroCommandByte;
-
-
   if (xbee.available()) {
     // read from serial and parse incoming data
- 
+
     left_motor_value = xbee.parseInt();
     right_motor_value = xbee.parseInt();
     zero_value = xbee.parseInt();
-    
-    // Alternately, use xbee.readBytesUntil('\n', buf, 30);
-    // then use strtok to split the strings
-    // and atoi to pare them into ints
-    
+
     // Debugging
+    #if SERIAL_DEBUG
     Serial.println(left_motor_value + COMMA + right_motor_value + COMMA + zero_value);
-//    Serial.print(left_motor_value);
-//    Serial.print(", ");
-//    Serial.print(right_motor_value);
-//    Serial.print(", ");
-//    Serial.print(zero_value);
-//    Serial.println();
+    // Serial.println(left_motor_value + String(", ") + right_motor_value + String(", ") + zero_value);
+    #endif
   }
 
-//  digitalWrite(RESET_BTN_OUTPUT, LOW);
+  // Pass the value of the zero button, which is itself read xbee, to the metal detector Uno
+  // digitalWrite(ZERO_BTN_OUTPUT, zero_value);
 
   // Adjust the speed and direction of the right and left motors
   controlMotor(right_motor_value, 1);
