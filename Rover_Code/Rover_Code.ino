@@ -6,128 +6,116 @@
 // #include "utility/Adafruit_MS_PWMServoDriver.h"
 
 #define SERIAL_DEBUG 1
-
 // Pin definitions
-#define SENSITIVITY_POT_APIN 1
-#define SPRAYCAN_PIN 8
+#define SPRAYCAN_PIN 9
+#define TRIGGER_BTN_PIN 11
 #define ZERO_BTN_OUTPUT 13
+#define ARRAY_LENGTH 2
 
+// Initialize motor shield
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
-Adafruit_DCMotor *right_motor = AFMS.getMotor(1);
-Adafruit_DCMotor *left_motor = AFMS.getMotor(2);
+Adafruit_DCMotor* right_motor = AFMS.getMotor(1);
+Adafruit_DCMotor* left_motor = AFMS.getMotor(2);
 
-SoftwareSerial xbee(10, 11); // RX, TX
+// Initialize arrays for controlling motors
+bool firstTime = true;
+int motorValues[ARRAY_LENGTH];
+int initialMotorValues[ARRAY_LENGTH];
+float deadZoneOffset[ARRAY_LENGTH];
+float deadZoneRange = 0.06;
+
 Servo spraycan;
-
-int left_motor_value = 540;
-int right_motor_value = 540;
 int zero_value = 0;
-String COMMA = ", ";
+SoftwareSerial xbee(10, 11); // RX, TX
 
 void setup() {
-  // Configure I/O pins
-  pinMode(SPRAYCAN_PIN, OUTPUT);
-  pinMode(ZERO_BTN_OUTPUT, OUTPUT);
+  pinMode(MARKING_PIN, OUTPUT);
+  pinMode(TRIGGER_BTN_PIN, INPUT_PULLUP);
+  pinMode(RESET_BTN_PIN, INPUT_PULLUP);
+  pinMode(RESET_BTN_OUTPUT, OUTPUT);
 
-  // Configure the servo
+  AFMS.begin();  // create with the default frequency 1.6KHz
+  right_motor->run(RELEASE);
+  left_motor->run(RELEASE);
   // spraycan.attach(SPRAYCAN_PIN);
 
-  // Configure motor shield with the default frequency 1.6KHz
-  AFMS.begin();
-
-  // Configure hardware serial for debugging
-  Serial.begin(57600);
-  // wait for serial port to connect. Needed for native USB port only
-  while (!Serial) ;
-
   #if SERIAL_DEBUG
+  Serial.begin(57600);
+  // Wait for serial port to connect. Needed for native USB port only
+  while (!Serial) ;
   Serial.println("Serial connected");
   #endif
 
-  // set the data rate for the SoftwareSerial port
+  // Set the data rate for the SoftwareSerial port
   xbee.begin(9600);
   #if SERIAL_DEBUG
   Serial.println("Xbee connected");
-  Serial.println("Left, Right, Zero");
   #endif
-
-  //spraycan.attach(13);
-  //spraycan.write(15);
-  right_motor->run(RELEASE);
-  left_motor->run(RELEASE);
 }
+
 
 void loop() {
   if (xbee.available()) {
     // read from serial and parse incoming data
-
-    left_motor_value = xbee.parseInt();
-    right_motor_value = xbee.parseInt();
+    motorValues[0] = xbee.parseInt();
+    motorValues[1] = xbee.parseInt();
     zero_value = xbee.parseInt();
+    if (firstTime) {
+      initialMotorValues[0] = motorValues[0];
+      initialMotorValues[1] = motorValues[1];
+      deadZoneOffset[0] = motorValues[0] * deadZoneRange;
+      deadZoneOffset[1] = motorValues[1] * deadZoneRange;
+      firstTime = false;
+    }
 
     // Debugging
     #if SERIAL_DEBUG
-    Serial.println(left_motor_value + COMMA + right_motor_value + COMMA + zero_value);
-    // Serial.println(left_motor_value + String(", ") + right_motor_value + String(", ") + zero_value);
+    Serial.println(motorValues[0] + ", " + motorValues[1] + ", " + motorValues[2]);
+    Serial.print("Calulated Offsets: ");
+    Serial.println(String(deadZoneOffset[0]) + ", " + deadZoneOffset[1] + ", " + deadZoneOffset[2]);
     #endif
-  }
 
-  // Pass the value of the zero button, which is itself read xbee, to the metal detector Uno
-  // digitalWrite(ZERO_BTN_OUTPUT, zero_value);
-
-  // Adjust the speed and direction of the right and left motors
-  controlMotor(right_motor_value, 1);
-  controlMotor(left_motor_value, 2);
-}
-
-/**
-* Control the speed of a motor on the rover.
-* @param motor_value a [0, 1023] value that determines the speed and direction of the motor
-* @param motor the motor to apply changes to based on the following map:
-* 1 = Right track
-* 2 = Left track
-*/
-void controlMotor(int motor_value, int motor) {
-  if ((motor_value > 0) && (motor_value <= 500)) {
-    // move backwards
-    int motor_speed = map(motor_value, 0, 500, 150, 0);
-    if (motor == 1) {
-      right_motor->run(BACKWARD);
-      right_motor->setSpeed(motor_speed);
-    } else if (motor == 2) {
-      left_motor->run(BACKWARD);
-      left_motor->setSpeed(motor_speed);
-    }
-  } else if ((motor_value > 500) && (motor_value < 580)) {
-    // neutral position
-    if (motor == 1) {
-      right_motor->run(RELEASE);
-    } else if (motor == 2) {
-      left_motor->run(RELEASE);
-    }
-  } else if (motor_value >= 580) {
-    // move forward
-    int motor_speed = map(motor_value, 580, 1023, 0, 150);
-    if (motor == 1) {
-      right_motor->run(FORWARD);
-      right_motor->setSpeed(motor_speed);
-    } else if (motor == 2) {
-      left_motor->run(FORWARD);
-      left_motor->setSpeed(motor_speed);
-    }
+    // Adjust the speed and direction of the right and left motors
+    controlMotor();
+    // Pass the value of the zero button, which is itself read xbee, to the metal detector Uno
+    // digitalWrite(ZERO_BTN_OUTPUT, zero_value);
   }
 }
 
-/**
-* Map an integer from range [inMin, inMax] to a floating point range [outMin, outMax]
-* @param input the integer to be mapped
-* @param inMin minimum of input range
-* @param inMax maximum of input range
-* @param outMin minimum of output range
-* @param outMax maximum of output range
-* @return mapped floating point value
-*/
-float mapFloat(int input, int inMin, int inMax, float outMin, float outMax) {
-  float scale = (float)(input - inMin) / (inMax - inMin);
-  return ((outMax - outMin) * scale) + outMin;
+
+void controlMotor() {
+  for (int i = 0; i < ARRAY_LENGTH; ++i) {
+    // Move backwards
+    if ((motorValues[i] > 0) && (motorValues[i] <= initialMotorValues[i] - deadZoneOffset[i])) {
+      int motor_speed = map(motorValues[i], 0, initialMotorValues[i] - deadZoneOffset[i], 150, 0);
+      if (i == 0) {
+        // Left motor
+        left_motor->run(BACKWARD);
+        left_motor->setSpeed(motor_speed);
+      } else if (i == 1) {
+        // Right motor
+        right_motor->run(BACKWARD);
+        right_motor->setSpeed(motor_speed);
+      }
+    } else if ((motorValues[i] > initialMotorValues[i] - deadZoneOffset[i]) && (motorValues[i] < initialMotorValues[i] + deadZoneOffset[i])) {
+      //Neutral
+      if(i == 0) {
+        left_motor->run(RELEASE);
+      } else if (i == 1) {
+        right_motor->run(RELEASE);
+      }
+    } else if ((motorValues[i] >= initialMotorValues[i] + deadZoneOffset[i])) {
+      // Forward
+      int motor_speed = map(motorValues[i], initialMotorValues[i] + deadZoneOffset[i], 1023, 0, 150);
+      if (i == 0) {
+        // Left motor
+        left_motor->run(FORWARD);
+        left_motor->setSpeed(motor_speed);
+      } else if (i == 1) {
+        // Right motor
+        right_motor->run(FORWARD);
+        right_motor->setSpeed(motor_speed);
+      }
+    }
+  }
 }
