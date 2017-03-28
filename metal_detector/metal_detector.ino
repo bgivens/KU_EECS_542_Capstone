@@ -24,7 +24,7 @@
  /*
  * Modified by: Daniel Norman
  */
-
+#include <SoftwareSerial.h>
 // Number of cycles from external counter needed to generate a signal event
 #define CYCLES_PER_SIGNAL 5000
 
@@ -35,15 +35,18 @@
 #define MARKING_THRESHOLD 400
 
 // Pin definitions
-#define SENSITIVITY_POT_APIN 1
 #define SPEAKER_PIN 2
 #define MARKING_PIN 8
 #define TRIGGER_BTN_PIN 11
 #define RESET_BTN_PIN 12
 #define RESET_BTN_OUTPUT 13
 
+SoftwareSerial rover(9 , 10); // RX, TX
+
 unsigned long lastSignalTime = 0;
 unsigned long signalTimeDelta = 0;
+
+float sensitivity = 8.0;
 
 boolean firstSignal = true;
 unsigned long storedTimeDelta = 0;
@@ -91,6 +94,7 @@ void setup()
   pinMode(RESET_BTN_OUTPUT, OUTPUT);
   
   Serial.begin(9600);
+  rover.begin(9600);
   Serial.println("Beginning");
 }
 
@@ -98,8 +102,12 @@ void loop()
 {
   //if (digitalRead(TRIGGER_BTN_PIN) == LOW)
   //{
-    //float sensitivity = mapFloat(analogRead(SENSITIVITY_POT_APIN), 0, 1023, 0.5, 10.0);
-    float sensitivity = 10.0;
+    //float sensitivity = 10.0;
+    if (rover.available()) {
+      sensitivity = rover.parseFloat();
+      sensitivity = (sensitivity < 0.5) ? 0.5 : sensitivity;
+      sensitivity = (sensitivity > 10) ? 10 : sensitivity;
+      }
     int storedTimeDeltaDifference = (storedTimeDelta - signalTimeDelta) * sensitivity;
     tone(SPEAKER_PIN, BASE_TONE_FREQUENCY + storedTimeDeltaDifference);
     

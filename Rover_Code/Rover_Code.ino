@@ -26,6 +26,7 @@ float deadZoneRange = 0.06;
 
 Servo spraycan;
 int zero_value = 0;
+int sensitivity = 8;
 SoftwareSerial xbee(10, 11); // RX, TX
 
 void setup() {
@@ -60,6 +61,7 @@ void loop() {
     motorValues[0] = xbee.parseInt();
     motorValues[1] = xbee.parseInt();
     zero_value = xbee.parseInt();
+    sensitivity = xbee.parseInt();
     if (firstTime) {
       initialMotorValues[0] = motorValues[0];
       initialMotorValues[1] = motorValues[1];
