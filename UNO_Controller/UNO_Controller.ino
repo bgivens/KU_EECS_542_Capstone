@@ -16,7 +16,7 @@ SoftwareSerial xbee(10, 11); // TX RX
 
 int joystick_left_vertical = 0;
 int joystick_right_vertical = 0;
-int zero_value = 1; // Used to zero the metal detector, active low
+int zero_value = 0; // Used to zero the metal detector
 int sensitivity; // Sensitivity of metal detector
 int found = 0;
 
@@ -44,7 +44,7 @@ void loop() {
   joystick_left_vertical = map(analogRead(JS_L_PIN), 0, 1023, 0, 510);
   joystick_right_vertical = map(analogRead(JS_R_PIN), 0, 1023, 0, 510);
   // Read inputs
-  zero_value = !digitalRead(ZERO_PIN);
+  zero_value = digitalRead(ZERO_PIN);
   sensitivity = analogRead(SENS_PIN);
 
   // Print values for debugging

@@ -62,7 +62,7 @@ void loop() {
     left_motor_val  = xbee.parseInt();
     right_motor_val = xbee.parseInt();
     zero_value = xbee.parseInt();
-    sensitivity = xbee.parseFloat();
+    sensitivity = xbee.parseInt();
 
     // Adjust the speed and direction of the right and left motors
     controlMotor(right_motor_val, 1);

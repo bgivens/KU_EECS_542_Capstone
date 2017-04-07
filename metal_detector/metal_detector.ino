@@ -25,6 +25,8 @@
  * Modified by: Daniel Norman
  */
 
+#define SERIAL_DEBUG 1
+
 // Number of cycles from external counter needed to generate a signal event
 #define CYCLES_PER_SIGNAL 5000
 
@@ -41,6 +43,14 @@
 #define TRIGGER_BTN_PIN 11
 #define RESET_BTN_PIN 12
 #define RESET_BTN_OUTPUT 13
+#define BAUDRATE 9600
+
+//TODO: determine serial pins
+SoftwareSerial rover(9, 10); // RX, TX
+int found = 0; //boolean, whether a mine is found
+int zero_value = 0; //boolean, zero detector when 1
+int i_sens;
+float sensitivity = 10.0;
 
 unsigned long lastSignalTime = 0;
 unsigned long signalTimeDelta = 0;
@@ -50,18 +60,14 @@ unsigned long storedTimeDelta = 0;
 
 // This signal is called whenever OCR1A reaches 0
 // (Note: OCR1A is decremented on every external clock cycle)
-SIGNAL(TIMER1_COMPA_vect)
-{
+SIGNAL(TIMER1_COMPA_vect) {
   unsigned long currentTime = micros();
   signalTimeDelta =  currentTime - lastSignalTime;
   lastSignalTime = currentTime;
 
-  if (firstSignal)
-  {
+  if (firstSignal) {
     firstSignal = false;
-  }
-  else if (storedTimeDelta == 0)
-  {
+  } else if (storedTimeDelta == 0) {
     storedTimeDelta = signalTimeDelta;
   }
 
@@ -69,11 +75,10 @@ SIGNAL(TIMER1_COMPA_vect)
   OCR1A += CYCLES_PER_SIGNAL;
 }
 
-void setup()
-{
+void setup() {
   // Set WGM(Waveform Generation Mode) to 0 (Normal)
   TCCR1A = 0b00000000;
-  
+
   // Set CSS(Clock Speed Selection) to 0b111 (External clock source on T0 pin
   // (ie, pin 5 on UNO). Clock on rising edge.)
   TCCR1B = 0b00000111;
@@ -89,48 +94,63 @@ void setup()
   pinMode(TRIGGER_BTN_PIN, INPUT_PULLUP);
   pinMode(RESET_BTN_PIN, INPUT_PULLUP);
   pinMode(RESET_BTN_OUTPUT, OUTPUT);
-  
+
+  rover.begin(BAUDRATE);
+
+  #if SERIAL_DEBUG
   Serial.begin(9600);
   Serial.println("Beginning");
+  #endif
 }
 
-void loop()
-{
+void loop() {
+  if (rover.available()) {
+    // Parse values from rover
+    zero_value = xbee.parseInt();
+    i_sens = rover.parseInt();
+
+    if (zero_value) {
+      // Reset metal detector when instructed
+      storedTimeDelta = 0;
+    }
+    // Convert [0, 1023] sensitivity to [0.5, 10.0] for calculations
+    mapFloat(i_sens, 0, 1023, 0.5, 10.0);
+  }
+
   //if (digitalRead(TRIGGER_BTN_PIN) == LOW)
   //{
     //float sensitivity = mapFloat(analogRead(SENSITIVITY_POT_APIN), 0, 1023, 0.5, 10.0);
-    float sensitivity = 10.0;
+
     int storedTimeDeltaDifference = (storedTimeDelta - signalTimeDelta) * sensitivity;
-    tone(SPEAKER_PIN, BASE_TONE_FREQUENCY + storedTimeDeltaDifference);
-    
+    // tone(SPEAKER_PIN, BASE_TONE_FREQUENCY + storedTimeDeltaDifference);
+
     Serial.println(storedTimeDeltaDifference);
-    
-    if (storedTimeDeltaDifference > MARKING_THRESHOLD)
-    {
-      digitalWrite(MARKING_PIN, HIGH);
+
+    if (storedTimeDeltaDifference > MARKING_THRESHOLD) {
+      // Currently detecting a mine
+      found = 1;
+    } else {
+      // Not detecting a mine
+      found = 0;
     }
-    else
-    {
-      digitalWrite(MARKING_PIN, LOW);
-    }
+
+  // TODO: Send found status back to rover
+
   //}
   //else
   //{
     //noTone(SPEAKER_PIN);
     //digitalWrite(MARKING_PIN, LOW);
   //}
-  if (digitalRead(RESET_BTN_PIN) == LOW)
-  {
-    storedTimeDelta = 0;
-    digitalWrite(RESET_BTN_OUTPUT, HIGH);
-  }
-  
-  digitalWrite(RESET_BTN_OUTPUT, LOW);
+
+  // if (digitalRead(RESET_BTN_PIN) == LOW) {
+  //   storedTimeDelta = 0;
+  //   digitalWrite(RESET_BTN_OUTPUT, HIGH);
+  // }
+  // digitalWrite(RESET_BTN_OUTPUT, LOW);
 }
 
-float mapFloat(int input, int inMin, int inMax, float outMin, float outMax)
-{
+float mapFloat(int input, int inMin, int inMax, float outMin, float outMax) {
   float scale = (float)(input - inMin) / (inMax - inMin);
   return ((outMax - outMin) * scale) + outMin;
 }
-
