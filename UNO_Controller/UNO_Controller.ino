@@ -14,10 +14,10 @@
 // Declaring software serial pins for XBee transmission
 SoftwareSerial xbee(10, 11); // TX RX
 
+int joystick_left_vertical = 0;
+int joystick_right_vertical = 0;
 int zero_value = 1; // Used to zero the metal detector, active low
 int sensitivity; // Sensitivity of metal detector
-int joystick_right_vertical = 0;
-int joystick_left_vertical = 0;
 int found = 0;
 
 
@@ -40,11 +40,12 @@ void setup() {
 
 
 void loop() {
+  // Read joysticks and convert [0, 1023] values to [0, 510]
+  joystick_left_vertical = map(analogRead(JS_L_PIN), 0, 1023, 0, 510);
+  joystick_right_vertical = map(analogRead(JS_R_PIN), 0, 1023, 0, 510);
   // Read inputs
   zero_value = !digitalRead(ZERO_PIN);
   sensitivity = analogRead(SENS_PIN);
-  joystick_left_vertical = analogRead(JS_L_PIN);
-  joystick_right_vertical = analogRead(JS_R_PIN);
 
   // Print values for debugging
   #if SERIAL_DEBUG
@@ -59,6 +60,8 @@ void loop() {
   #endif
 
   // Send data to receiver through XBee every 100ms
+  // Minimum values sent: 0,0,0,0        (7  bytes,  5.83 ms)
+  // Maximum values sent: 510,510,1,1023 (14 bytes, 11.67 ms)
   char buffer[30];
   sprintf(buffer, "%d,%d,%d,%d", joystick_left_vertical, joystick_right_vertical, zero_value, sensitivity);
   xbee.println(buffer);
