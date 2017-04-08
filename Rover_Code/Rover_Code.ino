@@ -39,10 +39,11 @@ void setup() {
   // spraycan.attach(SPRAYCAN_PIN);
 
   #if SERIAL_DEBUG
+  // Initialize hardware serial for serial monitor debugging
   Serial.begin(BAUDRATE);
   // Wait for serial port to connect. Needed for native USB port only
   while (!Serial) ;
-  Serial.println("Serial connected");
+  Serial.println("Rover debug connected");
   #endif
 
   // Set the data rate for the SoftwareSerial ports
@@ -50,6 +51,7 @@ void setup() {
   //detector.begin(BAUDRATE);
   #if SERIAL_DEBUG
   Serial.println("Software serial ports connected");
+  Serial.println("(left, right, zero, sens)");
   #endif
 }
 
@@ -63,6 +65,19 @@ void loop() {
     right_motor_val = xbee.parseInt();
     zero_value = xbee.parseInt();
     sensitivity = xbee.parseInt();
+    
+    // Print values for debugging
+    #if SERIAL_DEBUG
+    Serial.print("(");
+    Serial.print(left_motor_val);
+    Serial.print(", ");
+    Serial.print(right_motor_val);
+    Serial.print(", ");
+    Serial.print(zero_value);
+    Serial.print(", ");
+    Serial.print(sensitivity);
+    Serial.print(")\n");
+    #endif
 
     // Adjust the speed and direction of the right and left motors
     controlMotor(right_motor_val, 1);

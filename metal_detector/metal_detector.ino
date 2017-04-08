@@ -25,6 +25,7 @@
  * Modified by: Daniel Norman
  */
 
+#include <SoftwareSerial.h>
 #define SERIAL_DEBUG 1
 
 // Number of cycles from external counter needed to generate a signal event
@@ -106,7 +107,7 @@ void setup() {
 void loop() {
   if (rover.available()) {
     // Parse values from rover
-    zero_value = xbee.parseInt();
+    zero_value = rover.parseInt();
     i_sens = rover.parseInt();
 
     if (zero_value) {

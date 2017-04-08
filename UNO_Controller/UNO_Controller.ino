@@ -26,9 +26,12 @@ void setup() {
   xbee.begin(BAUDRATE);
 
   #if SERIAL_DEBUG
-  // Initializing hardware serial for serial monitor debugging
+  // Initialize hardware serial for serial monitor debugging
   Serial.begin(BAUDRATE);
+  // Wait for serial port to connect. Needed for native USB port only
   while (!Serial) ;
+  Serial.println("Controller debug connected");
+  Serial.println("(left, right, zero, sens)");
   #endif
 
   // Configure pins used for button input as inputs with pull-up resistors
@@ -44,19 +47,20 @@ void loop() {
   joystick_left_vertical = map(analogRead(JS_L_PIN), 0, 1023, 0, 510);
   joystick_right_vertical = map(analogRead(JS_R_PIN), 0, 1023, 0, 510);
   // Read inputs
-  zero_value = digitalRead(ZERO_PIN);
+  zero_value = !digitalRead(ZERO_PIN);
   sensitivity = analogRead(SENS_PIN);
 
   // Print values for debugging
   #if SERIAL_DEBUG
-  Serial.print("Left Joystick Vertical Axis Data: ");
-  Serial.println(joystick_left_vertical);
-  Serial.print("Right Joystick Vertical Axis Data: ");
-  Serial.println(joystick_right_vertical);
-  Serial.print("Zero Button: ");
-  Serial.println(zero_value);
-  Serial.print("Sensitivity: ");
-  Serial.println(sensitivity);
+  Serial.print("(");
+  Serial.print(joystick_left_vertical);
+  Serial.print(", ");
+  Serial.print(joystick_right_vertical);
+  Serial.print(", ");
+  Serial.print(zero_value);
+  Serial.print(", ");
+  Serial.print(sensitivity);
+  Serial.print(")\n");
   #endif
 
   // Send data to receiver through XBee every 100ms
