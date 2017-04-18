@@ -25,7 +25,6 @@
  * Modified by: Daniel Norman
  */
 
-#include <SoftwareSerial.h>
 #define SERIAL_DEBUG 1
 
 // Number of cycles from external counter needed to generate a signal event
@@ -38,19 +37,11 @@
 #define MARKING_THRESHOLD 400
 
 // Pin definitions
-#define SENSITIVITY_POT_APIN 1
-#define SPEAKER_PIN 2
-#define MARKING_PIN 8
-#define TRIGGER_BTN_PIN 11
-#define RESET_BTN_PIN 12
-#define RESET_BTN_OUTPUT 13
+#define FOUND_PIN 9
+#define ZERO_PIN 8
 #define BAUDRATE 9600
 
-//TODO: determine serial pins
-SoftwareSerial rover(9, 10); // RX, TX
-int found = 0; //boolean, whether a mine is found
-int zero_value = 0; //boolean, zero detector when 1
-int i_sens;
+
 float sensitivity = 10.0;
 
 unsigned long lastSignalTime = 0;
@@ -76,6 +67,7 @@ SIGNAL(TIMER1_COMPA_vect) {
   OCR1A += CYCLES_PER_SIGNAL;
 }
 
+
 void setup() {
   // Set WGM(Waveform Generation Mode) to 0 (Normal)
   TCCR1A = 0b00000000;
@@ -90,64 +82,43 @@ void setup() {
   // Set OCR1A (timer A counter) to 1 to trigger interrupt on next cycle
   OCR1A = 1;
 
-  pinMode(SPEAKER_PIN, OUTPUT);
-  pinMode(MARKING_PIN, OUTPUT);
-  pinMode(TRIGGER_BTN_PIN, INPUT_PULLUP);
-  pinMode(RESET_BTN_PIN, INPUT_PULLUP);
-  pinMode(RESET_BTN_OUTPUT, OUTPUT);
+  pinMode(FOUND_PIN, OUTPUT);
+  pinMode(ZERO_PIN, INPUT_PULLUP);
 
-  rover.begin(BAUDRATE);
 
   #if SERIAL_DEBUG
   Serial.begin(9600);
-  Serial.println("Beginning");
+  Serial.println("Beginning Metal Detector");
   #endif
 }
 
 void loop() {
-  if (rover.available()) {
-    // Parse values from rover
-    zero_value = rover.parseInt();
-    i_sens = rover.parseInt();
+  //float sensitivity = mapFloat(analogRead(SENSITIVITY_POT_APIN), 0, 1023, 0.5, 10.0);
+  
+  int storedTimeDeltaDifference = (storedTimeDelta - signalTimeDelta) * sensitivity;
+  // tone(SPEAKER_PIN, BASE_TONE_FREQUENCY + storedTimeDeltaDifference);
 
-    if (zero_value) {
-      // Reset metal detector when instructed
-      storedTimeDelta = 0;
-    }
-    // Convert [0, 1023] sensitivity to [0.5, 10.0] for calculations
-    mapFloat(i_sens, 0, 1023, 0.5, 10.0);
+  #if SERIAL_DEBUG
+  //Serial.println(storedTimeDeltaDifference);
+  #endif
+  
+  // Determine if a mine is detected and send found status back to rover
+  if (storedTimeDeltaDifference > MARKING_THRESHOLD) {
+    // Currently detecting a mine
+//    Serial.println(0);
+    digitalWrite(FOUND_PIN, LOW);
+  } else {
+    // Not detecting a mine
+//    Serial.println(1);
+    digitalWrite(FOUND_PIN, HIGH);
   }
 
-  //if (digitalRead(TRIGGER_BTN_PIN) == LOW)
-  //{
-    //float sensitivity = mapFloat(analogRead(SENSITIVITY_POT_APIN), 0, 1023, 0.5, 10.0);
-
-    int storedTimeDeltaDifference = (storedTimeDelta - signalTimeDelta) * sensitivity;
-    // tone(SPEAKER_PIN, BASE_TONE_FREQUENCY + storedTimeDeltaDifference);
-
-    Serial.println(storedTimeDeltaDifference);
-
-    if (storedTimeDeltaDifference > MARKING_THRESHOLD) {
-      // Currently detecting a mine
-      found = 1;
-    } else {
-      // Not detecting a mine
-      found = 0;
-    }
-
-  // TODO: Send found status back to rover
-
-  //}
-  //else
-  //{
-    //noTone(SPEAKER_PIN);
-    //digitalWrite(MARKING_PIN, LOW);
-  //}
-
-  // if (digitalRead(RESET_BTN_PIN) == LOW) {
-  //   storedTimeDelta = 0;
-  //   digitalWrite(RESET_BTN_OUTPUT, HIGH);
-  // }
+  // Reset metal detector when instructed
+  if (digitalRead(ZERO_PIN) == LOW) {
+    storedTimeDelta = 0;
+//    Serial.println("zero");
+    // digitalWrite(RESET_BTN_OUTPUT, HIGH);
+  }
   // digitalWrite(RESET_BTN_OUTPUT, LOW);
 }
 

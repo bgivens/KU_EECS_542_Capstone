@@ -8,12 +8,15 @@
 #define SERIAL_DEBUG 1
 
 #define BAUDRATE 9600
+
 // Pin definitions
 #define SPRAYCAN_PIN 7
+#define FOUND_PIN 9
+#define ZERO_PIN 8
 
 // Serial definitions
 SoftwareSerial   xbee(10, 11); // RX, TX
-SoftwareSerial detector(8, 9); // RX, TX
+//SoftwareSerial detector(8, 9); // RX, TX
 
 // Initialize motor shield
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
@@ -49,6 +52,10 @@ void setup() {
   // Set the data rate for the SoftwareSerial ports
   xbee.begin(BAUDRATE);
   //detector.begin(BAUDRATE);
+  
+  pinMode(FOUND_PIN, INPUT_PULLUP);
+  pinMode(ZERO_PIN, OUTPUT);
+  
   #if SERIAL_DEBUG
   Serial.println("Software serial ports connected");
   Serial.println("(left, right, zero, sens)");
@@ -60,7 +67,6 @@ void loop() {
   // If data has been received on the xbee
   if (xbee.available()) {
     // Read from serial and parse incoming data
-    // TODO: Add synchronization with readuntil
     left_motor_val  = xbee.parseInt();
     right_motor_val = xbee.parseInt();
     zero_value = xbee.parseInt();
@@ -68,15 +74,15 @@ void loop() {
     
     // Print values for debugging
     #if SERIAL_DEBUG
-    Serial.print("(");
-    Serial.print(left_motor_val);
-    Serial.print(", ");
-    Serial.print(right_motor_val);
-    Serial.print(", ");
-    Serial.print(zero_value);
-    Serial.print(", ");
-    Serial.print(sensitivity);
-    Serial.print(")\n");
+//    Serial.print("(");
+//    Serial.print(left_motor_val);
+//    Serial.print(", ");
+//    Serial.print(right_motor_val);
+//    Serial.print(", ");
+//    Serial.print(zero_value);
+//    Serial.print(", ");
+//    Serial.print(sensitivity);
+//    Serial.print(")\n");
     #endif
 
     // Adjust the speed and direction of the right and left motors
@@ -86,16 +92,17 @@ void loop() {
 
     // Send sensitivity and zeroing instructions to the metal detector Uno
     // but only send instructions after another value is received from the controller
-    sprintf(buffer, "%d,%d", zero_value, sensitivity);
-    detector.println(buffer);
+    if (zero_value == 1) { 
+      digitalWrite(ZERO_PIN, LOW);
+    } else {
+      digitalWrite(ZERO_PIN, HIGH);
+    }
   }
 
   // Read from metal detector Uno
-  if (detector.available()) {
-    found = detector.parseInt();
-    sprintf(buffer, "%d", found);
-    xbee.println(buffer);
-  }
+  found = !digitalRead(FOUND_PIN);
+  Serial.println(found);
+  xbee.println(found);
 }
 
 
