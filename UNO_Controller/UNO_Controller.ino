@@ -6,8 +6,6 @@
 #define ZERO_PIN 12
 #define JS_R_PIN A1
 #define JS_L_PIN A0
-// TODO: determine the following pins
-#define SENS_PIN 10
 #define LED_PIN 9
 
 
@@ -17,7 +15,6 @@ SoftwareSerial xbee(10, 11); // TX RX
 int joystick_left_vertical = 0;
 int joystick_right_vertical = 0;
 int zero_value = 0; // Used to zero the metal detector
-int sensitivity; // Sensitivity of metal detector
 int found = 0;
 
 
@@ -48,7 +45,6 @@ void loop() {
   joystick_right_vertical = map(analogRead(JS_R_PIN), 0, 1023, 0, 510);
   // Read inputs
   zero_value = !digitalRead(ZERO_PIN);
-  sensitivity = analogRead(SENS_PIN);
 
   // Print values for debugging
   #if SERIAL_DEBUG
@@ -58,16 +54,12 @@ void loop() {
   Serial.print(joystick_right_vertical);
   Serial.print(", ");
   Serial.print(zero_value);
-  Serial.print(", ");
-  Serial.print(sensitivity);
   Serial.print(")\n");
   #endif
 
   // Send data to receiver through XBee every 100ms
-  // Minimum values sent: 0,0,0,0        (7  bytes,  5.83 ms)
-  // Maximum values sent: 510,510,1,1023 (14 bytes, 11.67 ms)
-  char buffer[30];
-  sprintf(buffer, "%d,%d,%d,%d", joystick_left_vertical, joystick_right_vertical, zero_value, sensitivity);
+  char buffer[20];
+  sprintf(buffer, "%3d,%3d,%d", joystick_left_vertical, joystick_right_vertical, zero_value);
   xbee.println(buffer);
 
   // Read from rover Uno

@@ -25,7 +25,7 @@
  * Modified by: Daniel Norman
  */
 
-#define SERIAL_DEBUG 1
+#define SERIAL_DEBUG 0
 
 // Number of cycles from external counter needed to generate a signal event
 #define CYCLES_PER_SIGNAL 5000
@@ -38,6 +38,7 @@
 
 // Pin definitions
 #define FOUND_PIN 9
+#define LED_PIN 13
 #define ZERO_PIN 8
 #define BAUDRATE 9600
 
@@ -83,6 +84,7 @@ void setup() {
   OCR1A = 1;
 
   pinMode(FOUND_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
   pinMode(ZERO_PIN, INPUT_PULLUP);
 
 
@@ -105,12 +107,18 @@ void loop() {
   // Determine if a mine is detected and send found status back to rover
   if (storedTimeDeltaDifference > MARKING_THRESHOLD) {
     // Currently detecting a mine
-//    Serial.println(0);
+    #if SERIAL_DEBUG
+    Serial.println(0);
+    #endif
     digitalWrite(FOUND_PIN, LOW);
+    digitalWrite(LED_PIN, HIGH);
   } else {
     // Not detecting a mine
-//    Serial.println(1);
+    #if SERIAL_DEBUG
+    Serial.println(1);
+    #endif
     digitalWrite(FOUND_PIN, HIGH);
+    digitalWrite(LED_PIN, LOW);
   }
 
   // Reset metal detector when instructed
