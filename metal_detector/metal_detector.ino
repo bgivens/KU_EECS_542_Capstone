@@ -25,6 +25,8 @@
  * Modified by: Daniel Norman
  */
 
+#define SERIAL_DEBUG 0
+
 // Number of cycles from external counter needed to generate a signal event
 #define CYCLES_PER_SIGNAL 5000
 
@@ -35,12 +37,13 @@
 #define MARKING_THRESHOLD 400
 
 // Pin definitions
-#define SENSITIVITY_POT_APIN 1
-#define SPEAKER_PIN 2
-#define MARKING_PIN 8
-#define TRIGGER_BTN_PIN 11
-#define RESET_BTN_PIN 12
-#define RESET_BTN_OUTPUT 13
+#define FOUND_PIN 9
+#define LED_PIN 13
+#define ZERO_PIN 8
+#define BAUDRATE 9600
+
+
+float sensitivity = 10.0;
 
 unsigned long lastSignalTime = 0;
 unsigned long signalTimeDelta = 0;
@@ -50,18 +53,14 @@ unsigned long storedTimeDelta = 0;
 
 // This signal is called whenever OCR1A reaches 0
 // (Note: OCR1A is decremented on every external clock cycle)
-SIGNAL(TIMER1_COMPA_vect)
-{
+SIGNAL(TIMER1_COMPA_vect) {
   unsigned long currentTime = micros();
   signalTimeDelta =  currentTime - lastSignalTime;
   lastSignalTime = currentTime;
 
-  if (firstSignal)
-  {
+  if (firstSignal) {
     firstSignal = false;
-  }
-  else if (storedTimeDelta == 0)
-  {
+  } else if (storedTimeDelta == 0) {
     storedTimeDelta = signalTimeDelta;
   }
 
@@ -69,11 +68,11 @@ SIGNAL(TIMER1_COMPA_vect)
   OCR1A += CYCLES_PER_SIGNAL;
 }
 
-void setup()
-{
+
+void setup() {
   // Set WGM(Waveform Generation Mode) to 0 (Normal)
   TCCR1A = 0b00000000;
-  
+
   // Set CSS(Clock Speed Selection) to 0b111 (External clock source on T0 pin
   // (ie, pin 5 on UNO). Clock on rising edge.)
   TCCR1B = 0b00000111;
@@ -84,53 +83,54 @@ void setup()
   // Set OCR1A (timer A counter) to 1 to trigger interrupt on next cycle
   OCR1A = 1;
 
-  pinMode(SPEAKER_PIN, OUTPUT);
-  pinMode(MARKING_PIN, OUTPUT);
-  pinMode(TRIGGER_BTN_PIN, INPUT_PULLUP);
-  pinMode(RESET_BTN_PIN, INPUT_PULLUP);
-  pinMode(RESET_BTN_OUTPUT, OUTPUT);
-  
+  pinMode(FOUND_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(ZERO_PIN, INPUT_PULLUP);
+
+
+  #if SERIAL_DEBUG
   Serial.begin(9600);
-  Serial.println("Beginning");
+  Serial.println("Beginning Metal Detector");
+  #endif
 }
 
-void loop()
-{
-  //if (digitalRead(TRIGGER_BTN_PIN) == LOW)
-  //{
-    //float sensitivity = mapFloat(analogRead(SENSITIVITY_POT_APIN), 0, 1023, 0.5, 10.0);
-    float sensitivity = 10.0;
-    int storedTimeDeltaDifference = (storedTimeDelta - signalTimeDelta) * sensitivity;
-    tone(SPEAKER_PIN, BASE_TONE_FREQUENCY + storedTimeDeltaDifference);
-    
-    Serial.println(storedTimeDeltaDifference);
-    
-    if (storedTimeDeltaDifference > MARKING_THRESHOLD)
-    {
-      digitalWrite(MARKING_PIN, HIGH);
-    }
-    else
-    {
-      digitalWrite(MARKING_PIN, LOW);
-    }
-  //}
-  //else
-  //{
-    //noTone(SPEAKER_PIN);
-    //digitalWrite(MARKING_PIN, LOW);
-  //}
-  if (digitalRead(RESET_BTN_PIN) == LOW)
-  {
-    storedTimeDelta = 0;
-    digitalWrite(RESET_BTN_OUTPUT, HIGH);
-  }
+void loop() {
+  //float sensitivity = mapFloat(analogRead(SENSITIVITY_POT_APIN), 0, 1023, 0.5, 10.0);
   
-  digitalWrite(RESET_BTN_OUTPUT, LOW);
+  int storedTimeDeltaDifference = (storedTimeDelta - signalTimeDelta) * sensitivity;
+  // tone(SPEAKER_PIN, BASE_TONE_FREQUENCY + storedTimeDeltaDifference);
+
+  #if SERIAL_DEBUG
+  //Serial.println(storedTimeDeltaDifference);
+  #endif
+  
+  // Determine if a mine is detected and send found status back to rover
+  if (storedTimeDeltaDifference > MARKING_THRESHOLD) {
+    // Currently detecting a mine
+    #if SERIAL_DEBUG
+    Serial.println(0);
+    #endif
+    digitalWrite(FOUND_PIN, LOW);
+    digitalWrite(LED_PIN, HIGH);
+  } else {
+    // Not detecting a mine
+    #if SERIAL_DEBUG
+    Serial.println(1);
+    #endif
+    digitalWrite(FOUND_PIN, HIGH);
+    digitalWrite(LED_PIN, LOW);
+  }
+
+  // Reset metal detector when instructed
+  if (digitalRead(ZERO_PIN) == LOW) {
+    storedTimeDelta = 0;
+//    Serial.println("zero");
+    // digitalWrite(RESET_BTN_OUTPUT, HIGH);
+  }
+  // digitalWrite(RESET_BTN_OUTPUT, LOW);
 }
 
-float mapFloat(int input, int inMin, int inMax, float outMin, float outMax)
-{
+float mapFloat(int input, int inMin, int inMax, float outMin, float outMax) {
   float scale = (float)(input - inMin) / (inMax - inMin);
   return ((outMax - outMin) * scale) + outMin;
 }
-
