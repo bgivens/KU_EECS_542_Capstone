@@ -5,6 +5,7 @@
 #include <Servo.h>
 // #include "utility/Adafruit_MS_PWMServoDriver.h"
 
+#define ENABLE_SPRAY 0
 #define BAUDRATE 9600
 
 // Pin definitions
@@ -13,6 +14,7 @@
 #define ZERO_PIN 8
 #define ERROR_HIGH 4
 #define ERROR_LOW 3
+#define SPRAY_INTERVAL 5
 
 
 // Initialize motor shield
@@ -22,6 +24,7 @@ Adafruit_DCMotor* left_motor = AFMS.getMotor(2);
 
 // Variables
 Servo spraycan;
+unsigned int spray_counter = 10;
 int zero_value = 0;
 int found = 0;
 int left_motor_val = 255;
@@ -37,7 +40,8 @@ void setup() {
   AFMS.begin();  // create with the default frequency 1.6KHz
   right_motor->run(RELEASE);
   left_motor->run(RELEASE);
-  // spraycan.attach(SPRAYCAN_PIN);
+  spraycan.attach(SPRAYCAN_PIN);
+  spraycan.write(180);
 
   // Initialize hardware serial
   Serial.begin(BAUDRATE);
@@ -84,7 +88,22 @@ void loop() {
     digitalWrite(ZERO_PIN, !zero_value);
     
     // Send metal detector found status to controller
-    Serial.println(!digitalRead(FOUND_PIN));
+    found = !digitalRead(FOUND_PIN);
+    Serial.println(found);
+    
+    #if ENABLE_SPRAY
+    if (found) {
+      spraycan.write(100);
+      spray_counter = 0;
+    }
+    
+    
+    if (spray_counter < SPRAY_INTERVAL) {
+      ++spray_counter;
+    } else {
+      spraycan.write(180);
+    }
+    #endif
   }
 }
 
