@@ -5,7 +5,7 @@
 #include <Servo.h>
 // #include "utility/Adafruit_MS_PWMServoDriver.h"
 
-#define ENABLE_SPRAY 0
+#define ENABLE_SPRAY 1
 #define BAUDRATE 9600
 
 // Pin definitions
@@ -31,7 +31,10 @@ int left_motor_val = 255;
 int right_motor_val = 255;
 int new_left_motor = 255;
 int new_right_motor = 255;
-char buffer[20]; // Buffer for sending/receiving strings
+int H = 72;
+int E = 68;
+int D = 69;
+char buffer[30]; // Buffer for sending/receiving strings
 
 
 void setup() {
@@ -62,52 +65,54 @@ void loop() {
   // If data has been received on the xbee
   if (Serial.available()) {
     // Read from serial and parse incoming data
-    new_left_motor = Serial.parseInt();
-    new_right_motor = Serial.parseInt();
-    zero_value = Serial.parseInt();
-    
-    // Error check input
-    if (new_left_motor != 0 && new_right_motor != 0 && (zero_value == 0 || zero_value == 1)) {
-      left_motor_val = new_left_motor;
-      right_motor_val = new_right_motor;
-      digitalWrite(ERROR_HIGH, LOW);
-    } else {
-      // Bad input from xbee (you should reset rover and controller Unos)
-      digitalWrite(ERROR_HIGH, HIGH);
-      // Stop rover in event of an error
-      left_motor_val = 255;
-      right_motor_val = 255;
-      while(Serial.available())
-      {
-      	int clear_buffer = Serial.read();
+    if (H == Serial.parseInt() && E == Serial.parseInt() && D == Serial.parseInt()) {
+      new_left_motor = Serial.parseInt();
+      new_right_motor = Serial.parseInt();
+      zero_value = Serial.parseInt();
+      
+      // Error check input
+      if (new_left_motor != 0 && new_right_motor != 0 && (zero_value == 0 || zero_value == 1)) {
+        left_motor_val = new_left_motor;
+        right_motor_val = new_right_motor;
+        digitalWrite(ERROR_HIGH, LOW);
+      } else {
+        // Bad input from xbee (you should reset rover and controller Unos)
+        digitalWrite(ERROR_HIGH, HIGH);
+        // Stop rover in event of an error
+        left_motor_val = 255;
+        right_motor_val = 255;
+        while(Serial.available())
+        {
+        	int clear_buffer = Serial.read();
+        }
       }
+      
+      // Adjust the speed and direction of the right and left motors
+      controlMotor(right_motor_val, 1);
+      controlMotor(left_motor_val, 2);
+  
+      // Pass zeroing instructions to the metal detector Uno
+      // but only send instructions when a value is received from the controller
+      digitalWrite(ZERO_PIN, zero_value);
+      
+      // Send metal detector found status to controller
+      found = !digitalRead(FOUND_PIN);
+      Serial.println(found);
+      
+      #if ENABLE_SPRAY
+      if (found) {
+        spraycan.write(100);
+        spray_counter = 0;
+      }
+      
+      
+      if (spray_counter < SPRAY_INTERVAL) {
+        ++spray_counter;
+      } else {
+        spraycan.write(180);
+      }
+      #endif
     }
-    
-    // Adjust the speed and direction of the right and left motors
-    controlMotor(right_motor_val, 1);
-    controlMotor(left_motor_val, 2);
-
-    // Pass zeroing instructions to the metal detector Uno
-    // but only send instructions when a value is received from the controller
-    digitalWrite(ZERO_PIN, !zero_value);
-    
-    // Send metal detector found status to controller
-    found = !digitalRead(FOUND_PIN);
-    Serial.println(found);
-    
-    #if ENABLE_SPRAY
-    if (found) {
-      spraycan.write(100);
-      spray_counter = 0;
-    }
-    
-    
-    if (spray_counter < SPRAY_INTERVAL) {
-      ++spray_counter;
-    } else {
-      spraycan.write(180);
-    }
-    #endif
   }
 }
 

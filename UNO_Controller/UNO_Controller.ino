@@ -58,8 +58,8 @@ void loop() {
   #endif
 
   // Send data to receiver through XBee every 100ms
-  char buffer[20];
-  sprintf(buffer, "%3d,%3d,%d", joystick_left_vertical, joystick_right_vertical, zero_value);
+  char buffer[30];
+  sprintf(buffer, "%3d,%3d,%3d,%3d,%3d,%d", 72, 68, 69, joystick_left_vertical, joystick_right_vertical, zero_value);
   xbee.println(buffer);
 
   // Read from rover Uno

@@ -25,7 +25,7 @@
  * Modified by: Daniel Norman
  */
 
-#define SERIAL_DEBUG 0
+#define SERIAL_DEBUG 1
 
 // Number of cycles from external counter needed to generate a signal event
 #define CYCLES_PER_SIGNAL 5000
@@ -85,7 +85,7 @@ void setup() {
 
   pinMode(FOUND_PIN, OUTPUT);
   pinMode(LED_PIN, OUTPUT);
-  pinMode(ZERO_PIN, INPUT_PULLUP);
+  pinMode(ZERO_PIN, INPUT);
 
 
   #if SERIAL_DEBUG
@@ -108,22 +108,25 @@ void loop() {
   if (storedTimeDeltaDifference > MARKING_THRESHOLD) {
     // Currently detecting a mine
     #if SERIAL_DEBUG
-    Serial.println(0);
+    //Serial.println(0);
     #endif
     digitalWrite(FOUND_PIN, LOW);
     digitalWrite(LED_PIN, HIGH);
   } else {
     // Not detecting a mine
     #if SERIAL_DEBUG
-    Serial.println(1);
+    //Serial.println(1);
     #endif
     digitalWrite(FOUND_PIN, HIGH);
     digitalWrite(LED_PIN, LOW);
   }
 
   // Reset metal detector when instructed
-  if (digitalRead(ZERO_PIN) == LOW) {
+  if (digitalRead(ZERO_PIN) == HIGH) {
     storedTimeDelta = 0;
+    #if SERIAL_DEBUG
+    Serial.println("Zero pen reset");
+    #endif
 //    Serial.println("zero");
     // digitalWrite(RESET_BTN_OUTPUT, HIGH);
   }
