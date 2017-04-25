@@ -77,6 +77,10 @@ void loop() {
       // Stop rover in event of an error
       left_motor_val = 255;
       right_motor_val = 255;
+      while(Serial.available())
+      {
+      	int clear_buffer = Serial.read();
+      }
     }
     
     // Adjust the speed and direction of the right and left motors
